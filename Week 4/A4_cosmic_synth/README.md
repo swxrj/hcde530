@@ -73,10 +73,6 @@ A4_cosmic_synth/
 
 Reflection for the course: `../week4.md` (one level up, in `Week 4/`).
 
-## Optional: 3D
-
-In `main.js`, switch the import to `visuals-v2.js` for the Three.js wireframe build.
-
 ## Credits
 
 - [NASA NeoWs](https://api.nasa.gov) · [NASA DONKI](https://api.nasa.gov) · [HEASARC](https://heasarc.gsfc.nasa.gov) (pulsar snapshot) · [Three.js](https://threejs.org) · [Tone.js](https://tonejs.github.io)
