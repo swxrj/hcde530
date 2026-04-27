@@ -1,9 +1,9 @@
-# Local-only key override (used during dev so you don't commit personal keys)
-js/config.local.js
+# Local-only secrets (anywhere in repo)
+**/js/config.local.js
 .env
 .env.example
 
-# OS / editor noise
+# OS / editor
 .DS_Store
 .vscode/
 .idea/
@@ -13,7 +13,7 @@ node_modules/
 .cursor/
 *.log
 
-# Local reference only (do not commit)
+# Local reference only
 hcde530_competency_code_explanation_guide.md
 /cosmic synth ref.png
 /Week 4/A4_cosmic_synth/cosmic synth ref.png
