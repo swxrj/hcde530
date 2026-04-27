@@ -15,6 +15,9 @@ import ssl
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+# Where the data comes from and where we write it out.
+# PAGE_SIZE is how many reviews to ask for in one request; the API only
+# returns a chunk at a time, so we page through it.
 BASE_URL = "https://hcde530-week4-api.onrender.com"
 REVIEWS_ENDPOINT = f"{BASE_URL}/reviews"
 OUTPUT_CSV = "reviews_category_helpful_votes.csv"
@@ -47,7 +50,7 @@ SSL_CONTEXT = build_ssl_context()
 
 
 def fetch_page(offset, limit):
-    """Fetch a single page of reviews from the API."""
+    """Fetch one page of reviews. ``offset`` = where to start, ``limit`` = how many to ask for."""
     query = urlencode({"limit": limit, "offset": offset})
     url = f"{REVIEWS_ENDPOINT}?{query}"
     with urlopen(url, timeout=30, context=SSL_CONTEXT) as response:
@@ -55,7 +58,12 @@ def fetch_page(offset, limit):
 
 
 def fetch_all_reviews():
-    """Page through /reviews until every record has been collected."""
+    """Page through /reviews until every record has been collected.
+
+    The API hands us reviews in chunks of ``PAGE_SIZE`` rows. We keep
+    moving the ``offset`` forward until either the API returns nothing
+    or we have already covered the reported ``total``.
+    """
     all_reviews = []
     offset = 0
 
@@ -67,6 +75,7 @@ def fetch_all_reviews():
         total = data.get("total", 0)
         returned = data.get("returned", len(reviews))
 
+        # Stop if this page was empty or we've reached the end of the dataset.
         if returned == 0 or offset + returned >= total:
             break
         offset += returned
@@ -75,6 +84,7 @@ def fetch_all_reviews():
 
 
 def main():
+    """Pull every review and write the category + helpful votes to a CSV."""
     reviews = fetch_all_reviews()
     print(f"Fetched {len(reviews)} reviews.\n")
 
@@ -82,6 +92,9 @@ def main():
         writer = csv.writer(csv_file)
         writer.writerow(["id", "app", "category", "helpful_votes"])
 
+        # For each review, pull just the fields we care about. Using
+        # ``.get(..., default)`` keeps us safe if a field is missing in
+        # the response instead of crashing with KeyError.
         for review in reviews:
             review_id = review.get("id", "")
             app = review.get("app", "")

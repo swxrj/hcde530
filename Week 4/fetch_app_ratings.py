@@ -16,6 +16,9 @@ import ssl
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+# Where the data comes from and where the summary goes.
+# PAGE_SIZE is how many reviews we ask for in one request; the API limits it,
+# so we fetch in chunks and stitch them together.
 BASE_URL = "https://hcde530-week4-api.onrender.com"
 ROOT_ENDPOINT = f"{BASE_URL}/"
 REVIEWS_ENDPOINT = f"{BASE_URL}/reviews"
@@ -48,12 +51,17 @@ SSL_CONTEXT = build_ssl_context()
 
 
 def fetch_json(url):
+    """Open a URL and parse the JSON response into a Python dict/list."""
     with urlopen(url, timeout=30, context=SSL_CONTEXT) as response:
         return json.load(response)
 
 
 def fetch_root():
-    """Call the API root so we log what the service advertises."""
+    """Call the API root so we log what the service advertises.
+
+    This is just a friendly hello to the API. If it fails we keep going,
+    because the actual data we need is on /reviews, not the root.
+    """
     try:
         return fetch_json(ROOT_ENDPOINT)
     except Exception as exc:
@@ -62,12 +70,18 @@ def fetch_root():
 
 
 def fetch_page(offset, limit):
+    """Get one page of reviews. ``offset`` is where to start, ``limit`` is how many to ask for."""
     query = urlencode({"limit": limit, "offset": offset})
     return fetch_json(f"{REVIEWS_ENDPOINT}?{query}")
 
 
 def fetch_all_reviews():
-    """Page through /reviews until every record has been collected."""
+    """Page through /reviews until every record has been collected.
+
+    The API returns reviews in chunks. We keep asking for the next chunk
+    using ``offset`` and stop when the API says there are no more rows
+    (either it returned 0, or we have reached the reported ``total``).
+    """
     all_reviews = []
     offset = 0
 
@@ -79,6 +93,7 @@ def fetch_all_reviews():
         total = data.get("total", 0)
         returned = data.get("returned", len(reviews))
 
+        # Stop if this page was empty or we've already covered the whole dataset.
         if returned == 0 or offset + returned >= total:
             break
         offset += returned
@@ -87,13 +102,22 @@ def fetch_all_reviews():
 
 
 def summarize_by_app(reviews):
-    """Group reviews by app and compute rating stats for each one."""
+    """Group reviews by app and compute rating stats for each one.
+
+    For every app we track all its ratings, the highest one we have seen,
+    and the lowest one we have seen. After the loop we turn each group
+    into one summary row (high, low, average, total).
+    """
+    # First pass: bucket every rating under its app and update high/low as we go.
+    # Skip reviews that don't have a rating, since we can't include them in stats.
     grouped = {}
     for review in reviews:
         app = review.get("app", "Unknown")
         rating = review.get("rating")
         if rating is None:
             continue
+        # setdefault creates the bucket the first time we see this app,
+        # then reuses the same bucket for every later review of that app.
         bucket = grouped.setdefault(
             app, {"ratings": [], "highest": rating, "lowest": rating}
         )
@@ -103,6 +127,7 @@ def summarize_by_app(reviews):
         if rating < bucket["lowest"]:
             bucket["lowest"] = rating
 
+    # Second pass: turn each bucket into one row of the summary table.
     summary = []
     for app, bucket in grouped.items():
         ratings = bucket["ratings"]
@@ -118,17 +143,21 @@ def summarize_by_app(reviews):
             }
         )
 
+    # Sort alphabetically (case-insensitive) so the CSV is easy to scan.
     summary.sort(key=lambda row: row["app"].lower())
     return summary
 
 
 def main():
+    """Run end to end: hit the API, summarize per app, and write the CSV."""
+    # Optional: log what the API tells us about itself, just for context.
     root_info = fetch_root()
     if root_info:
         print("API root response:")
         print(json.dumps(root_info, indent=2))
         print()
 
+    # Pull every review (paginated under the hood) and summarize per app.
     reviews = fetch_all_reviews()
     print(f"Fetched {len(reviews)} reviews.\n")
 
