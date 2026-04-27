@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-terminal">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cosmic Synth</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "tone": "https://esm.sh/tone@14.8.49"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="scene" aria-label="Starfield and orbit diagram"></canvas>
+
+  <div id="labels" aria-hidden="true">
+    <div
+      class="orbit-label"
+      data-track="pulsar"
+      title="Pulsar: a fast-spinning star remnant; here it sets tempo and a soft pluck beat."
+    >Pulsar Clock</div>
+    <div
+      class="orbit-label"
+      data-track="asteroids"
+      title="Asteroids: space rocks on paths near Earth; each one can trigger a drum hit."
+    >Asteroid Drums</div>
+    <div
+      class="orbit-label"
+      data-track="bass"
+      title="Bass: follows moon phase and how much rock mass is in the day’s list."
+    >Distorted Bass</div>
+    <div
+      class="orbit-label"
+      data-track="solar"
+      title="Pad: mood from NASA same-day solar flares and geomagnetic storms (DONKI)."
+    >Solar / Pad</div>
+  </div>
+
+  <header id="header" aria-label="Branding">
+    <h1 class="cosmic-title">Cosmic Synth</h1>
+    <p class="cosmic-verse" id="cosmic-verse" aria-label="What you hear">
+      Pick a calendar day. We pull open space data for that day and turn it into a short loop you can hear and watch.<br>
+      A pulsar is an ultra-fast spinning dead star; here it sets the tick. Asteroids are space rocks whose paths can pass near Earth; here each one can become a drum hit.<br>
+      The Moon steadies the low end. NASA&rsquo;s same-day solar weather list (flares and storms) steers the soft pad behind everything.
+    </p>
+  </header>
+
+  <aside id="panel" role="complementary" aria-label="Control panel">
+    <pre class="panel-frame top">+-- INPUT ----------------------------------+</pre>
+    <details class="about-block panel-section">
+      <summary>What is this? How does it work?</summary>
+      <div class="about-body">
+        <p>
+          <strong>Cosmic Synth</strong> is a small browser toy: you choose a date, it fetches public
+          space listings for that day, and plays a four-layer loop while a simple orbit drawing reacts.
+          No astronomy background required.
+        </p>
+        <p>
+          <strong>Asteroids (near-Earth)</strong> are small bodies—mostly rock or metal—whose orbits can bring them
+          close to Earth. NASA publishes daily lists; we use them for drums (not a collision forecast).
+          <strong>Pulsars</strong> are ultra-dense star leftovers that spin hundreds of times per second and sweep a beam
+          of radio energy past us like a lighthouse; we borrow a real catalog pulsar to set beats per minute.
+          <strong>Moon phase</strong> is how lit the Moon looks from Earth.
+          NASA&rsquo;s <strong>DONKI</strong> feed lists <strong>solar flares</strong> and <strong>geomagnetic storms</strong> by date; we score that day lightly
+          (big flares, high Kp index) and map it to the same calm / wide / intense pad moods as before.
+        </p>
+        <p>
+          Use <strong>Generate</strong> to load data, then <strong>Play</strong>. Hover any readout row or track name for plain-English
+          help. The same date usually gives the same loop until the live data changes.
+        </p>
+      </div>
+    </details>
+
+    <section class="panel-section" aria-label="Date and generate">
+      <div class="field">
+        <label for="date-input">DATE_UTC (YYYY/MM/DD)</label>
+        <div class="date-row">
+          <input
+            type="text"
+            id="date-input"
+            inputmode="numeric"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="10"
+            placeholder="YYYY/MM/DD"
+            aria-describedby="date-input-hint"
+          />
+          <button type="button" id="random-date-btn" class="term-btn ghost" title="Random date" aria-label="Random date">RND</button>
+        </div>
+        <p id="date-input-hint" class="muted small">Type the date as digits; slashes fill in for you.</p>
+      </div>
+      <button type="button" id="generate-btn" class="term-btn primary" aria-keyshortcuts="g">
+        <span class="generate-label generate-label--idle">[ GENERATE COSMIC LOOP ]</span>
+        <span class="generate-label generate-label--busy" hidden>
+          Generating<span class="generate-ellipsis" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>
+        </span>
+      </button>
+      <p class="muted small api-key-tip">
+        We <strong>highly recommend</strong> a free personal
+        <a href="https://api.nasa.gov" target="_blank" rel="noopener">NASA API key</a>
+        when you have a minute—optional, but nice if you keep trying new dates.
+      </p>
+    </section>
+
+    <section class="panel-section" id="readout" hidden aria-label="Data readout">
+      <h2 class="hud-heading">SIGNAL / SKY</h2>
+      <pre class="panel-sub">+-- READOUT (hover a row for help) --------+</pre>
+      <div class="stats" role="list" aria-label="Data readout">
+        <div class="stat-row" role="listitem" data-info="date" tabindex="0">
+          <dt>Date (UTC)</dt><dd id="stat-date">&mdash;</dd>
+        </div>
+        <div class="stat-row" role="listitem" data-info="asteroids" tabindex="0">
+          <dt>Asteroids</dt><dd id="stat-count">&mdash;</dd>
+        </div>
+        <div class="stat-row" role="listitem" data-info="hazard" tabindex="0">
+          <dt>Hazardous</dt><dd id="stat-hazard">&mdash;</dd>
+        </div>
+        <div class="stat-row" role="listitem" data-info="velocity" tabindex="0">
+          <dt>Avg velocity</dt><dd id="stat-velocity">&mdash;</dd>
+        </div>
+        <div class="stat-row" role="listitem" data-info="bpm" tabindex="0">
+          <dt>BPM</dt><dd id="stat-bpm">&mdash;</dd>
+        </div>
+        <div class="stat-row" role="listitem" data-info="moon" tabindex="0">
+          <dt>Moon</dt><dd id="stat-moon">&mdash;</dd>
+        </div>
+        <div class="stat-row" role="listitem" data-info="activity" tabindex="0">
+          <dt>Activity</dt><dd id="stat-activity">&mdash;</dd>
+        </div>
+      </div>
+      <button type="button" id="play-btn" class="term-btn primary" disabled>
+        [ PLAY // STOP ]
+      </button>
+    </section>
+
+    <section class="panel-section" id="toggles" hidden aria-label="Track mutes">
+      <h2 class="hud-heading">TRACKS</h2>
+      <pre class="panel-sub">+-- CHANNELS (hover a name for help) -----+</pre>
+      <label class="toggle" data-info="pulsar">
+        <input type="checkbox" data-track="pulsar" checked />
+        <span class="ch">01</span>
+        <span>PULSAR / CLOCK</span>
+      </label>
+      <label class="toggle" data-info="asteroidTrack">
+        <input type="checkbox" data-track="asteroids" checked />
+        <span class="ch">02</span>
+        <span>ASTEROID / DRUMS</span>
+      </label>
+      <label class="toggle" data-info="bass">
+        <input type="checkbox" data-track="bass" checked />
+        <span class="ch">03</span>
+        <span>DIST / BASS</span>
+      </label>
+      <label class="toggle" data-info="solar">
+        <input type="checkbox" data-track="solar" checked />
+        <span class="ch">04</span>
+        <span>SOLAR / PAD</span>
+      </label>
+    </section>
+
+    <section class="panel-section" id="key-panel" hidden aria-label="Add NASA API key">
+      <h2 class="hud-heading">NASA API KEY</h2>
+      <p class="muted small">
+        NASA is temporarily limiting requests from this page. Get a free key at
+        <a href="https://api.nasa.gov" target="_blank" rel="noopener">api.nasa.gov</a>, paste it below, press Commit,
+        then try <strong>Generate</strong> again. It is saved only in this browser.
+      </p>
+      <input type="text" id="key-input" placeholder="NASA_API_KEY" spellcheck="false" autocomplete="off" />
+      <button type="button" id="key-save-btn" class="term-btn">[ COMMIT ]</button>
+    </section>
+
+    <section class="panel-section" id="status" aria-live="polite" aria-atomic="true">
+      <p id="status-msg" class="muted">Choose a date, then Generate.</p>
+    </section>
+
+    <pre class="panel-frame bottom">+-- END PANEL -----------------------------+</pre>
+  </aside>
+
+  <div id="info-popover" class="info-popover" role="dialog" aria-modal="false" aria-label="Help" hidden>
+    <h4 class="info-popover-title"></h4>
+    <p class="info-popover-body"></p>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Local-only key override (used during dev so you don't commit personal keys)
+js/config.local.js
+.env
+.env.example
+
+# OS / editor noise
+.DS_Store
+.vscode/
+.idea/
+*.swp
+node_modules/
+
+.cursor/
+*.log
+
+# Local reference only (do not commit)
+hcde530_competency_code_explanation_guide.md
+/cosmic synth ref.png
+/Week 4/A4_cosmic_synth/cosmic synth ref.png

@@ -1,0 +1,28 @@
+# Week 4 — Cosmic Synth (A4)
+
+## Live demo
+
+Add your real link when GitHub Pages is up:  
+`https://YOUR_GITHUB_USERNAME.github.io/hcde530/Week%204/A4_cosmic_synth/index.html`
+
+---
+
+I started this project because I wanted to work with real space data and APIs, and I was drawn to pulsars and satellites and that general “cosmic” layer of information. The honest constraint was that we only had a pulsar catalog to work with locally (a static list of real pulsars with periods and names), not a live pulsar stream. So I used that catalog as the spine of the experience—each date picks one pulsar from the list, and that choice sets the tempo (BPM) and the name you see in the readout. On top of that base, I pulled in NASA’s open APIs so the rest of the day wasn’t made up: near-Earth asteroids, solar activity, and I kept moon phase in the mix by computing it in code so the low end of the music could still feel tied to the sky.
+
+What I cared about was not just “show the API response on the screen.” I wanted to push the data a little—pull several things for the same date, then turn those numbers into something else: lengths of notes, how rough the bass feels, how busy the drums are, a soft background pad that changes character. So the data points become sound and motion, and the person using it gets something that feels more like a personal, creative session than a dashboard, even though it’s all still grounded in that one day of real listings.
+
+The APIs in plain terms: I use NASA NeoWs to get the list of near-Earth objects for the day you pick. That feed gives each rock a speed, a rough size, and whether it’s tagged hazardous. Those feed the drum layer (how hits are spread, how “big” or “tight” they feel, and an extra little accent when a rock is in the hazardous category) and the readout (how many asteroids, how many hazardous, average flyby speed). I use NASA DONKI for the same calendar day: solar flares and geomagnetic storm activity. I score that day a bit and map it to a small set of pad moods—calmer vs wider vs more intense—so the floating chords and the way the outer ring is drawn can shift. The pulsar line is driven by the catalog entry for that date. Moon phase nudges the bass (how dark or gritty it feels) and shows up in the readout as the moon name, and I rolled the asteroid count into a simple activity label (calm / active / intense) so the panel tells a quick story. Altogether the readout shows things like date, asteroid count, hazardous count, average velocity, BPM, moon, activity—each number comes from a specific part of that pipeline, not random decoration.
+
+At first I tried to lean on APOD (NASA’s astronomy picture of the day) for a moody background layer, but in practice the web side was finicky and it didn’t line up with what I wanted for same-day, comparable science data. I switched to DONKI so the “space weather” layer is aligned with the date you’re hearing, and the pad and the copy could honestly say they’re driven by flares and storms, not a pretty image that might not match the rest.
+
+On the visual side, everything is wired to react to the beat and to the same spec as the audio. The drawing isn’t a static graphic: orbits and dots flash when a layer plays, some elements pulse in size or strength, and asteroid dots can shift in how large or sharp they look based on things like size and hazard. There’s a playhead so you can see where you are in the loop. I also wanted control: there are four channels (pulsar, asteroids, bass, solar/pad) and you can switch any of them on or off, so the sound and the picture both respect that—more like a little mixer than a fixed video.
+
+## How I got there (iterations and issues)
+
+I didn’t land on the current look in one go. I started with an interactive 3D direction (Three.js, orbit-style). It *worked*, but on a laptop it was heavy: frame drops, fan noise, and the interaction didn’t pay off enough for the cost. I went through a few passes—roughly two or three real iterations—trying to simplify it, and in the end I stepped back and moved to a 2D, schematic view with a different aesthetic (more like a technical diagram / terminal panel in black and white with a bit of accent). That trade was worth it: the app stays responsive, the readout stays readable, and the “cosmic” feeling comes from the data and the motion, not from pushing millions of shaded polygons.
+
+## Execution and the demo
+
+The whole thing runs in the browser with no server of my own—HTML, CSS, and JavaScript—so I can put it on [GitHub Pages](https://pages.github.com/) and anyone can open the link. The catch with public NASA keys is rate limits: a shared demo key only gets so many calls. I designed the page so you can try it first with no setup, and if NASA throttles the request, the UI asks you to paste a free personal key (from [api.nasa.gov](https://api.nasa.gov)) and stores it only in your browser so you can keep using the app without me ever hosting secrets. That was a real constraint I hit while testing, and handling it felt like part of shipping something people can actually use, not just a one-off on my machine.
+
+I used Cursor as a coding partner to move faster on wiring the fetches, the loop that drives the music, and the canvas updates, but I still had to test real dates, read what NASA actually returned on empty or busy days, and make judgment calls (like leaving 3D behind and replacing APOD with DONKI). The end result is something I can describe in one breath: pick a day, pull real space listings, anchor the clock to a real pulsar from a catalog, layer on asteroids and solar weather and the moon, and turn it into a short loop you can hear, watch, and strip down to the channels you care about.
