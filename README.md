@@ -6,16 +6,8 @@ A **browser-only** app: you pick a **date (UTC)**, it pulls **public NASA data**
 
 ## Live demo (GitHub Pages)
 
-After you deploy (see below), the app is usually at:
-
-**`https://YOUR_GITHUB_USERNAME.github.io/REPO_NAME/…/index.html`**
-
-- If this folder lives in the **hcde530** course repo as `Week 4/A4_cosmic_synth/`, your link will look like:
-
-  **`https://YOUR_GITHUB_USERNAME.github.io/hcde530/Week%204/A4_cosmic_synth/index.html`**
-
-Replace `YOUR_GITHUB_USERNAME` with your real GitHub handle.  
-*(If your instructor uses a different org/repo name, swap `hcde530` and the path to match your fork.)*
+- Course site (repo root): [https://swxrj.github.io/hcde530/](https://swxrj.github.io/hcde530/)
+- This app in **Week 4 / A4_cosmic_synth**: [https://swxrj.github.io/hcde530/Week%204/A4_cosmic_synth/index.html](https://swxrj.github.io/hcde530/Week%204/A4_cosmic_synth/index.html)
 
 ---
 

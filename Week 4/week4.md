@@ -2,8 +2,9 @@
 
 ## Live demo
 
-Add your real link when GitHub Pages is up:  
-`https://YOUR_GITHUB_USERNAME.github.io/hcde530/Week%204/A4_cosmic_synth/index.html`
+Site (GitHub Pages, root of repo): [https://swxrj.github.io/hcde530/](https://swxrj.github.io/hcde530/)  
+
+A4 app (this assignment): [https://swxrj.github.io/hcde530/Week%204/A4_cosmic_synth/index.html](https://swxrj.github.io/hcde530/Week%204/A4_cosmic_synth/index.html)
 
 ---
 
