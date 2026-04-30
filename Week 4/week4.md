@@ -6,6 +6,8 @@
 
 ---
 
+The data for Cosmic Synth comes from NASA APIs as JSON for the date you pick, plus the local pulsar catalog for tempo and labels. The app turns that into sound and motion in the browser; it does not produce a CSV file. You can open the demo in a browser, pick a date, and listen and watch the result without running any code locally.
+
 I started this project because I wanted to work with real space data and APIs, and I was drawn to pulsars and satellites and that general “cosmic” layer of information. The honest constraint was that we only had a pulsar catalog to work with locally (a static list of real pulsars with periods and names), not a live pulsar stream. So I used that catalog as the spine of the experience—each date picks one pulsar from the list, and that choice sets the tempo (BPM) and the name you see in the readout. On top of that base, I pulled in NASA’s open APIs so the rest of the day wasn’t made up: near-Earth asteroids, solar activity, and I kept moon phase in the mix by computing it in code so the low end of the music could still feel tied to the sky.
 
 What I cared about was not just “show the API response on the screen.” I wanted to push the data a little—pull several things for the same date, then turn those numbers into something else: lengths of notes, how rough the bass feels, how busy the drums are, a soft background pad that changes character. So the data points become sound and motion, and the person using it gets something that feels more like a personal, creative session than a dashboard, even though it’s all still grounded in that one day of real listings.
