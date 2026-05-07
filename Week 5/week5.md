@@ -1,17 +1,32 @@
 # Week 5 — Star dataset
 
----
+## 1. Dataset
 
-The file I kept coming back to is a small Kaggle star table: each row is a star with temperature, luminosity, radius, absolute magnitude, a numeric type code, a color word, and a spectral class letter. It is not glamorous to look at in the raw CSV, but it is the kind of thing astronomers actually argue from—numbers on one side and human-readable labels on the other—and I wanted to see how far I could get with honest questions before I turn any of it into charts or a Week 6 notebook.
+I am using the Star Dataset from Kaggle: https://www.kaggle.com/datasets/deepu1109/star-dataset?resource=download
 
-I picked this because Week 4 was about pulling live-ish space data into an experience. Week 5 for me was the opposite impulse: sit still with one static table and refuse to hand-wave. I care whether “hot,” “blue,” and “main sequence” still line up the way textbooks draw them when the data is messy real labels, not textbook cartoons.
+The dataset includes star properties such as temperature, luminosity, radius, absolute magnitude, color, spectral class, and star type. I download the CSV file, keep a copy as `Week 5/stars.csv`, load it with pandas in a Jupyter notebook (and in a small Python script for quick terminal runs), and use it to compare patterns across different categories of stars.
 
-So I spent time in pandas doing the boring-in-a-good-way steps first—skim the first rows, look at column types and missing counts, tally how often each color and type shows up, cut the table down once to only the very hot and very bright rows to see who is left, then average the big four numbers by star type so I could talk about gaps instead of vibes. The printout is not the final artifact; it is the proof that I read the table before I narrate it. What stuck with me is that luminosity really does separate the giants from everything else in this slice, while radius and brightness only move together in a loose, “sometimes true” way if you squint at the whole file at once. Color was the humbling part: the strings in the file are spelled a dozen different ways, so “color tells temperature” is directionally right but not something I would bet a grade on without cleaning the labels first.
+## 2. Three analytical questions
 
-## How I worked through it
+**Which star properties are most useful for telling star types apart?**  
+I want to compare temperature, luminosity, radius, and absolute magnitude across star types to find which measurements show the biggest differences between categories.
 
-I treated the week as a ladder. If the ladder is crooked at the bottom—wrong types, silent gaps in the columns, a bogus row—nothing on the top rung matters. Once the bottom felt solid, the middle rung was comparing groups, and the top rung was admitting where a story I wanted (bigger always means brighter, color always means temperature) simply is not supported line by line. That is a mood shift from how I usually work on front-end or creative pieces: less “does it feel cool,” more “would I be embarrassed if someone asked me to defend this sentence.”
+**Are larger stars always brighter, or does the relationship change by star type?**  
+I want to look at how radius, luminosity, and absolute magnitude relate to each other, and whether some types of stars break the simple assumption that bigger means brighter.
 
-## Cursor
+**Does a star’s color reliably indicate its temperature and type?**  
+I want to compare star color with temperature, spectral class, and star type to see whether color can be used as a reliable clue, or whether there are overlaps and exceptions.
 
-I used Cursor the same way I used it on Cosmic Synth: faster scaffolding and fewer typos on the plumbing, but I still had to read the terminal output, decide the filter and the groupings, and rewrite the comments so they say what question I am asking the data and what the answer would mean for someone who does not live inside pandas. The small Python file is a shared draft in that sense; the judgments about what counts as evidence are mine.
+## 3. Why these questions matter
+
+I am interested in space and astronomy, and these questions let me explore how stars can be understood through measurable traits like size, brightness, temperature, and color. I also want to practice turning complex scientific data into clear comparisons, interactive visuals, and possibly more artistic representations that make these patterns easier and more engaging for a broader audience to understand.
+
+## 4. What I actually did
+
+I worked in this order: load the CSV, use `head()` and `info()` to see shape and types, count missing values, use `value_counts()` on type, color, and spectral class, filter once to very hot and very bright rows, then `groupby` star type and take means for the main numeric columns. That order is on purpose. If the file is wrong or empty in spots, the later answers are not trustworthy.
+
+What I saw in this file: mean luminosity jumps a lot between star types, so it is a strong lever for telling types apart in this table. Radius and luminosity correlate overall, but not tightly enough to treat “bigger = brighter” as a rule without checking type. Color words in the CSV are spelled inconsistently, so color is a rough guide to temperature, not a clean key, unless the labels are cleaned first.
+
+The main notebook is `week5_stars_analysis.ipynb`. There is also `week5_stars_analysis.py` with the same steps for a quick printout from the terminal.
+
+I used Cursor to speed up boilerplate and cell layout, but I chose the questions, the filter cutoffs, and I read the outputs to see if they matched what I expected before writing this file.

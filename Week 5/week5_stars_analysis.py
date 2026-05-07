@@ -126,7 +126,7 @@ def main() -> None:
     print()
 
     # ------------------------------------------------------------------
-    # Short read on the three README / week5.md questions (plain interpretation)
+    # Short read on the three week5.md questions (plain interpretation)
     # ------------------------------------------------------------------
     print("=" * 60)
     print("9. Short tie-in to the three analytical questions (from week5.md)")
