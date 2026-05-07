@@ -1,64 +1,17 @@
-# Week 5 — Star Dataset Analysis (A5 / Week 6 foundation)
+# Week 5 — Star dataset
 
-This week I used pandas to start the analysis for my stars mini project. This is the base work for the Week 6 notebook, so I focused on building a clear analysis path first, not just writing code quickly.
+---
 
-## What I worked on
+The file I kept coming back to is a small Kaggle star table: each row is a star with temperature, luminosity, radius, absolute magnitude, a numeric type code, a color word, and a spectral class letter. It is not glamorous to look at in the raw CSV, but it is the kind of thing astronomers actually argue from—numbers on one side and human-readable labels on the other—and I wanted to see how far I could get with honest questions before I turn any of it into charts or a Week 6 notebook.
 
-I used the star dataset from Kaggle and the local file `Week 5/stars.csv`.  
-The dataset includes:
+I picked this because Week 4 was about pulling live-ish space data into an experience. Week 5 for me was the opposite impulse: sit still with one static table and refuse to hand-wave. I care whether “hot,” “blue,” and “main sequence” still line up the way textbooks draw them when the data is messy real labels, not textbook cartoons.
 
-- Temperature (K)
-- Luminosity (L/Lo)
-- Radius (R/Ro)
-- Absolute magnitude (Mv)
-- Star type
-- Star color
-- Spectral class
+So I spent time in pandas doing the boring-in-a-good-way steps first—skim the first rows, look at column types and missing counts, tally how often each color and type shows up, cut the table down once to only the very hot and very bright rows to see who is left, then average the big four numbers by star type so I could talk about gaps instead of vibes. The printout is not the final artifact; it is the proof that I read the table before I narrate it. What stuck with me is that luminosity really does separate the giants from everything else in this slice, while radius and brightness only move together in a loose, “sometimes true” way if you squint at the whole file at once. Color was the humbling part: the strings in the file are spelled a dozen different ways, so “color tells temperature” is directionally right but not something I would bet a grade on without cleaning the labels first.
 
-I used this data to investigate three questions:
+## How I worked through it
 
-1. Which properties are most useful for distinguishing star types?
-2. Are larger stars always brighter, or does that change by type?
-3. Can star color reliably indicate temperature and star type?
+I treated the week as a ladder. If the ladder is crooked at the bottom—wrong types, silent gaps in the columns, a bogus row—nothing on the top rung matters. Once the bottom felt solid, the middle rung was comparing groups, and the top rung was admitting where a story I wanted (bigger always means brighter, color always means temperature) simply is not supported line by line. That is a mood shift from how I usually work on front-end or creative pieces: less “does it feel cool,” more “would I be embarrassed if someone asked me to defend this sentence.”
 
-## Why I chose this
+## Cursor
 
-I am interested in astronomy, and this dataset gives a way to connect measurable values (temperature, size, brightness, color) with star categories. I also want to practice translating technical data into explanations and visuals that are understandable for someone outside a technical class.
-
-## How I approached the analysis with pandas
-
-I used the same kinds of pandas operations from class and tied each one to a question:
-
-- `head()` and `info()` to inspect structure, column types, and whether the file loaded correctly.
-- `value_counts()` on columns like star type, color, and spectral class to see common categories and imbalance.
-- Filtering rows (for example by ranges of temperature, luminosity, or radius) to inspect specific subsets.
-- `groupby(...).mean()` to compare average values across star types.
-- `isnull().sum()` to check for missing values before interpreting results.
-
-For each operation in my analysis script/notebook, I explain in plain language what I am asking and what the result means for understanding stars, not only what the line of code does.
-
-## Project approach (simple plan)
-
-My approach is:
-
-1. Check data quality and structure first.
-2. Compare star types across the key numeric properties.
-3. Test relationships between radius, luminosity, and magnitude.
-4. Cross-check color against temperature, spectral class, and type.
-5. Document patterns, overlaps, and exceptions carefully.
-
-This order helps avoid weak conclusions. I first make sure the data is readable and consistent, then I compare groups, then I interpret where simple assumptions fail.
-
-## What this Week 5 work sets up
-
-This week gives me a solid analysis foundation for Week 6:
-
-- reusable pandas workflow on `stars.csv`
-- clearly stated analytical questions
-- interpreted outputs that can become charts and notebook sections next week
-
-The goal is not only to run pandas commands, but to make evidence-based observations from the dataset in clear language.
-
-## Competency claim: C5 — Data Analysis with Pandas
-
-I used pandas on `Week 5/stars.csv` (Kaggle star dataset) in `week5_stars_analysis.py` to answer the three questions in this file: whether numeric means separate star types, how radius and luminosity relate overall, and whether mean temperature lines up with color labels. The script loads the CSV, prints `head()` and `info()` to verify structure, counts missing values with `isnull().sum()`, uses `value_counts()` on type, color, and spectral class to check balance, filters to a hot-and-bright subset to stress-test intuition, and uses `groupby(...).mean()` on temperature, luminosity, radius, and absolute magnitude by star type so the gaps between types are visible in numbers, not only in plots. Each of those blocks has comments that state the question in plain English and what the output would imply for interpreting the stars table.
+I used Cursor the same way I used it on Cosmic Synth: faster scaffolding and fewer typos on the plumbing, but I still had to read the terminal output, decide the filter and the groupings, and rewrite the comments so they say what question I am asking the data and what the answer would mean for someone who does not live inside pandas. The small Python file is a shared draft in that sense; the judgments about what counts as evidence are mine.
