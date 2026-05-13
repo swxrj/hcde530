@@ -14,7 +14,7 @@ The final assignment charts are saved as PNG files in `Week 6/charts_static/`:
 - `q2_radius_luminosity.png`
 - `q3_color_temperature.png`
 
-I also kept the code that generates them in `Week 6/week6_stars_visuals.py`, plus a notebook version in `Week 6/week6_stars_visuals.ipynb`. The HTML files in `Week 6/outputs/` were useful while I was iterating on design, but the PNG files are the ones that directly satisfy the A6 requirement.
+I also kept the code that generates them in `Week 6/week6_stars_visuals.py`, plus a full combined notebook in `Week 6/week6_mp1_full.ipynb` (and the earlier plotting notebook in `Week 6/week6_stars_visuals.ipynb`). The HTML files in `Week 6/outputs/` were useful while I was iterating on design, but the PNG files are the ones that directly satisfy the A6 requirement.
 
 ## Process and approach
 
