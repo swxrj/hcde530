@@ -63,4 +63,4 @@ Older exploratory plots from an early matplotlib pass are in `archive/legacy/` f
 
 I used Cursor for faster coding on repetitive pieces—loading the CSV, Plotly setup, Kaleido export paths, notebook layout. The questions, the filter ideas, the choice to clean colors, the call to replace the Q1 box plot with a heatmap, and the written interpretations were mine. I read the outputs and only kept charts I could explain in plain language.
 
-If I had more time, I would try a simple model that combines luminosity, radius, and temperature to predict type, and compare that to using color alone.
+
