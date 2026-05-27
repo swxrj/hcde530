@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+/* Override DaisyUI light theme — sky blue primary */
+[data-theme="light"] {
+  --color-primary: oklch(62% 0.19 220);
+  --color-primary-content: oklch(98% 0.01 220);
+  --color-primary-focus: oklch(54% 0.18 220);
+}
+
+/* Smooth scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(80% 0 0) transparent;
+}
