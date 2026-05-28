@@ -1,5 +1,61 @@
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useStore } from '../store/useStore'
+import { defaultVisibilityRule } from '../lib/visibilityRules'
+
+const OPERATOR_LABELS = {
+  is_empty: 'is empty',
+  is_not_empty: 'is not empty',
+  equals: 'equals',
+  not_equals: 'does not equal',
+  contains: 'contains',
+  not_contains: 'does not contain',
+  gt: '>',
+  gte: '>=',
+  lt: '<',
+  lte: '<=',
+}
+
+const VALUE_OPERATORS = new Set(['equals', 'not_equals', 'contains', 'not_contains', 'gt', 'gte', 'lt', 'lte'])
+
+function InfoTip() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        className="grid h-5 w-5 place-items-center rounded-full text-[11px] font-bold"
+        style={{
+          background: 'rgba(255,255,255,0.78)',
+          border: '1px solid rgba(26,43,74,0.14)',
+          color: 'rgba(26,43,74,0.52)',
+        }}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        aria-label="Match mode help"
+      >
+        i
+      </button>
+      {open && (
+        <div
+          className="absolute right-7 top-1/2 z-30 w-56 -translate-y-1/2 rounded-xl p-3 text-[11px] leading-snug"
+          style={{
+            background: 'rgba(255,255,255,0.96)',
+            border: '1px solid rgba(26,43,74,0.12)',
+            color: 'rgba(26,43,74,0.72)',
+            boxShadow: '0 12px 30px rgba(26,43,74,0.14)',
+          }}
+        >
+          <strong style={{ color: 'rgba(26,43,74,0.82)' }}>Match all</strong> means every condition must be true.{' '}
+          <strong style={{ color: 'rgba(26,43,74,0.82)' }}>Match any</strong> means one true condition is enough.
+        </div>
+      )}
+    </span>
+  )
+}
 
 function ColorInput({ value, onChange }) {
   return (
@@ -18,6 +74,204 @@ function ColorInput({ value, onChange }) {
         placeholder="#1a2b4a or rgb(…)"
         onChange={(e) => onChange(e.target.value)}
       />
+    </div>
+  )
+}
+
+function VisibilitySection({ rawId }) {
+  const csvHeaders = useStore((s) => s.csvHeaders)
+  const visibilityRules = useStore((s) => s.visibilityRules)
+  const setVisibilityRule = useStore((s) => s.setVisibilityRule)
+  const clearVisibilityRule = useStore((s) => s.clearVisibilityRule)
+  const savedVisibilityRule = visibilityRules[rawId]
+
+  const savedRule = useMemo(
+    () => savedVisibilityRule ?? defaultVisibilityRule(),
+    [savedVisibilityRule],
+  )
+  const [draftRule, setDraftRule] = useState(savedRule)
+
+  useEffect(() => {
+    setDraftRule(savedRule)
+  }, [savedRule])
+
+  const rule = draftRule
+  const conditions = rule.conditions?.length ? rule.conditions : defaultVisibilityRule().conditions
+  const savedConditions = savedRule.conditions?.length ? savedRule.conditions : defaultVisibilityRule().conditions
+  const savedSignatures = new Set(
+    savedRule.mode === 'conditional'
+      ? savedConditions.map((condition) => JSON.stringify(condition))
+      : [],
+  )
+
+  const updateRule = (patch) => {
+    const next = { ...rule, ...patch }
+    setDraftRule(next)
+
+    if (next.mode === 'always') {
+      clearVisibilityRule(rawId)
+    } else if (next.mode === 'hidden') {
+      setVisibilityRule(rawId, next)
+    }
+  }
+
+  const updateCondition = (index, patch) => {
+    const nextConditions = conditions.map((condition, i) => (
+      i === index ? { ...condition, ...patch } : condition
+    ))
+    setDraftRule({ ...rule, mode: 'conditional', conditions: nextConditions })
+  }
+
+  const addCondition = () => {
+    setDraftRule({
+      ...rule,
+      mode: 'conditional',
+      match: rule.match ?? 'all',
+      conditions: [...conditions, { column: '', operator: 'is_not_empty', value: '' }],
+    })
+  }
+
+  const removeCondition = (index) => {
+    const nextConditions = conditions.filter((_, i) => i !== index)
+    setDraftRule({
+      ...rule,
+      mode: 'conditional',
+      conditions: nextConditions.length
+        ? nextConditions
+        : [{ column: '', operator: 'is_not_empty', value: '' }],
+    })
+  }
+
+  const saveRule = () => {
+    if ((rule.mode ?? 'always') === 'always') {
+      clearVisibilityRule(rawId)
+    } else {
+      const nextRule = {
+        ...rule,
+        conditions,
+      }
+      setVisibilityRule(rawId, nextRule)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <label
+        className="text-[11px] font-bold uppercase tracking-widest"
+        style={{ color: 'var(--ink-35)' }}
+      >
+        Visibility
+      </label>
+      <select
+        className="bf-input bf-select w-full h-9 pl-3 text-sm cursor-pointer"
+        value={rule.mode ?? 'always'}
+        onChange={(e) => updateRule({ mode: e.target.value, conditions })}
+      >
+        <option value="always">Always show</option>
+        <option value="hidden">Always hide</option>
+        <option value="conditional">Show when condition is true</option>
+      </select>
+
+      {rule.mode === 'conditional' && (
+        <>
+          <div className="flex items-center gap-2">
+            <select
+              className="bf-input bf-select h-9 flex-1 pl-3 text-sm cursor-pointer"
+              value={rule.match ?? 'all'}
+              onChange={(e) => updateRule({ match: e.target.value })}
+            >
+              <option value="all">Match all conditions</option>
+              <option value="any">Match any condition</option>
+            </select>
+            <InfoTip />
+          </div>
+
+          <div className="bf-inset rounded-xl p-3 flex flex-col gap-3">
+            {conditions.map((condition, index) => {
+              const needsValue = VALUE_OPERATORS.has(condition.operator)
+              const conditionSaved = savedSignatures.has(JSON.stringify(condition))
+              return (
+                <div key={index} className="flex flex-col gap-2">
+                  {index > 0 && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--ink-35)' }}>
+                      {(rule.match ?? 'all') === 'any' ? 'Or' : 'And'}
+                    </span>
+                  )}
+                  <select
+                    className="bf-input bf-select w-full h-9 pl-3 text-sm cursor-pointer"
+                    value={condition.column}
+                    onChange={(e) => updateCondition(index, { column: e.target.value })}
+                  >
+                    <option value="">Choose CSV column</option>
+                    {csvHeaders.map((h) => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                  <div className="grid grid-cols-[1fr_72px] gap-2">
+                    <select
+                      className="bf-input bf-select w-full h-9 pl-3 text-sm cursor-pointer"
+                      value={condition.operator}
+                      onChange={(e) => updateCondition(index, { operator: e.target.value })}
+                    >
+                      {Object.entries(OPERATOR_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                    {needsValue ? (
+                      <input
+                        type="text"
+                        className="bf-input w-full h-9 px-3 text-sm"
+                        value={condition.value ?? ''}
+                        placeholder="Value"
+                        onChange={(e) => updateCondition(index, { value: e.target.value })}
+                      />
+                    ) : (
+                      <div />
+                    )}
+                  </div>
+                  <div className="grid grid-cols-[72px_1fr] gap-2">
+                    <motion.button
+                      type="button"
+                      className="h-8 rounded-xl text-xs font-semibold"
+                      whileHover={{ scale: 1.03, y: -1 }}
+                      whileTap={{ scale: 0.97, y: 1 }}
+                      style={{
+                        background: conditionSaved
+                          ? 'linear-gradient(158deg, rgba(168,85,247,0.22), rgba(147,51,234,0.16))'
+                          : 'linear-gradient(158deg, rgba(250,245,255,0.92), rgba(243,232,255,0.72))',
+                        border: conditionSaved ? '1px solid rgba(168,85,247,0.46)' : '1px solid rgba(168,85,247,0.22)',
+                        color: conditionSaved ? 'rgb(107,33,168)' : 'rgba(126,34,206,0.72)',
+                        boxShadow: conditionSaved
+                          ? '0 7px 20px rgba(126,34,206,0.16), inset 0 1px 0 rgba(255,255,255,0.72)'
+                          : '0 4px 12px rgba(126,34,206,0.08), inset 0 1px 0 rgba(255,255,255,0.78)',
+                        cursor: 'pointer',
+                      }}
+                      onClick={saveRule}
+                      title="Save"
+                    >
+                      {conditionSaved ? 'Saved' : 'Save'}
+                    </motion.button>
+                    <button
+                      type="button"
+                      className="bf-btn-ghost h-8 rounded-xl text-xs"
+                      onClick={() => removeCondition(index)}
+                    >
+                      Remove condition
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <button
+            type="button"
+            className="bf-btn-ghost h-9 rounded-xl text-xs"
+            onClick={addCondition}
+          >
+            + Add condition
+          </button>
+        </>
+      )}
     </div>
   )
 }
@@ -84,6 +338,8 @@ function LayerDetail({ layer }) {
         </button>
       )}
 
+      <VisibilitySection rawId={layer.rawId} />
+
       {/* CSV column mapping */}
       {csvHeaders.length > 0 && (
         <div className="flex flex-col gap-2.5">
@@ -94,7 +350,7 @@ function LayerDetail({ layer }) {
             Map to CSV column
           </label>
           <select
-            className="bf-input w-full h-9 px-3 text-sm cursor-pointer"
+            className="bf-input bf-select w-full h-9 pl-3 text-sm cursor-pointer"
             value={m.source === 'csv' ? (m.column ?? '') : ''}
             onChange={(e) => {
               const col = e.target.value
@@ -218,6 +474,8 @@ function NodeDetail({ node }) {
           </p>
         )}
       </div>
+
+      {node.rawId && <VisibilitySection rawId={node.rawId} />}
 
       <div className="bf-inset rounded-2xl px-4 py-4 flex flex-col gap-2">
         <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--ink-35)' }}>

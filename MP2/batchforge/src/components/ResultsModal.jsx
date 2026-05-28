@@ -6,6 +6,8 @@ export default function ResultsModal() {
   const close = useStore((s) => s.closePreviewModal)
   const results = useStore((s) => s.previewResults)
   const totalRows = useStore((s) => s.csvRows.length)
+  const running = useStore((s) => s.generation.running)
+  const downloadAll = useStore((s) => s.downloadAll)
 
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [blobUrls, setBlobUrls] = useState([])
@@ -68,13 +70,22 @@ export default function ResultsModal() {
               Showing first {results.length} of {totalRows.toLocaleString()} SVGs
             </p>
           </div>
-          <button
-            className="bf-btn-ghost w-9 h-9 p-0 rounded-full flex items-center justify-center text-sm"
-            onClick={close}
-            style={{ color: 'var(--ink-60)' }}
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="bf-btn-primary h-9"
+              onClick={downloadAll}
+              disabled={running}
+            >
+              {running ? 'Preparing ZIP…' : 'Download all'}
+            </button>
+            <button
+              className="bf-btn-ghost w-9 h-9 p-0 rounded-full flex items-center justify-center text-sm"
+              onClick={close}
+              style={{ color: 'var(--ink-60)' }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-1 overflow-hidden min-h-0">

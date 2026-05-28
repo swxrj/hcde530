@@ -1,5 +1,6 @@
 import { useStore } from '../store/useStore'
 import ProgressBar from './ProgressBar'
+import { warningMessage } from '../lib/validation'
 
 export default function StatusBar() {
   const { running, currentIndex, total, warnings } = useStore((s) => s.generation)
@@ -22,7 +23,11 @@ export default function StatusBar() {
             {currentIndex.toLocaleString()} / {total.toLocaleString()}
           </span>
           {warnings.length > 0 && (
-            <span className="shrink-0 text-[11px]" style={{ color: 'rgba(217,119,6,0.8)' }}>
+            <span
+              className="shrink-0 text-[11px] max-w-[360px] truncate"
+              style={{ color: 'rgba(217,119,6,0.8)' }}
+              title={warnings.map(warningMessage).join('\n')}
+            >
               {warnings.length} warning{warnings.length !== 1 ? 's' : ''}
             </span>
           )}

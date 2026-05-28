@@ -1,5 +1,13 @@
 import JSZip from 'jszip'
 import { isValidCssColor } from './colors'
+import { fitText } from './textFit'
+import { getLocalizedValue } from './localization'
+import { applyMirroredGroups, applyRtlText, isRtlRow } from './rtl'
+import {
+  applyVisibility,
+  evaluateCsvVisibility,
+  evaluateVisibilityRule,
+} from './visibilityRules'
 
 function findEl(doc, rawId) {
   // Try data-name, inkscape:label, then CSS id selector
@@ -28,14 +36,16 @@ function renderFilenameFormat(format, row, index) {
 }
 
 /**
- * Generate one SVG per row, then bundle into a ZIP and trigger download.
+ * Generate one SVG per row.
  */
 export async function generateBatch({
   templateString,
   rows,
   mapping,
+  visibilityRules = {},
   filenameFormat,
   previewLimit = 50,
+  maxRows = rows.length,
   onProgress,
   onPreview,
   onWarning,
@@ -43,21 +53,70 @@ export async function generateBatch({
   const results = []
   const usedNames = new Map()
   let lastPreviewAt = -Infinity
+  const rowsToGenerate = rows.slice(0, maxRows)
 
   const layerEntries = Object.entries(mapping).filter(([, m]) => m.source !== 'none')
+  const visibilityEntries = Object.entries(visibilityRules)
 
-  for (let i = 0; i < rows.length; i++) {
+  for (let i = 0; i < rowsToGenerate.length; i++) {
     const row = rows[i]
 
     const doc = new DOMParser().parseFromString(templateString, 'image/svg+xml')
+    const warn = (warning) => onWarning?.({ row: i + 1, ...warning })
+
+    // Apply reusable UI-configured rules before values are inserted.
+    for (const [rawId, rule] of visibilityEntries) {
+      const el = findEl(doc, rawId)
+      if (!el) {
+        warn({ type: 'missing-field', layer: rawId, field: rawId })
+        continue
+      }
+
+      const result = evaluateVisibilityRule(row, rule)
+      if (result.invalid) {
+        warn({ type: 'invalid-rule', layer: rawId })
+        continue
+      }
+
+      applyVisibility(el, result.visible)
+      if (!result.visible) warn({ type: 'hidden-layer', layer: rawId })
+    }
+
+    // CSV shortcut: a column named layer_name__visible can override a row.
+    doc.querySelectorAll('[data-name], [inkscape\\:label], [id]').forEach((el) => {
+      const rawId =
+        el.getAttribute('data-name') ||
+        el.getAttribute('inkscape:label') ||
+        el.getAttribute('id')
+      if (!rawId) return
+
+      const result = evaluateCsvVisibility(row, rawId)
+      if (!result) return
+      if (result.invalid) {
+        warn({ type: 'invalid-rule', layer: rawId })
+        return
+      }
+
+      applyVisibility(el, result.visible)
+      if (!result.visible) warn({ type: 'hidden-layer', layer: rawId })
+    })
+
+    // Mirroring is opt-in per row, never global.
+    applyMirroredGroups(doc, row, warn)
 
     for (const [rawId, m] of layerEntries) {
       const el = findEl(doc, rawId)
       if (!el) continue
 
       let value
+      let locale = 'en-US'
       if (m.source === 'csv') {
-        value = row[m.column]
+        const localized = getLocalizedValue(row, m.column, (warning) => warn({ ...warning, layer: rawId }))
+        value = localized.value
+        locale = localized.locale
+        if (localized.missing) {
+          warn({ type: 'missing-field', layer: rawId, field: m.column })
+        }
       } else if (m.source === 'manual') {
         value = m.value
       }
@@ -66,18 +125,16 @@ export async function generateBatch({
 
       const tag = el.tagName.toLowerCase()
       if (tag === 'text' || tag === 'tspan') {
-        // Preserve <tspan> children (they carry x/y positioning from Figma).
-        // Update each tspan's text, or fall back to setting textContent directly.
-        const tspans = el.querySelectorAll('tspan')
-        if (tspans.length > 0) {
-          tspans.forEach((ts) => { ts.textContent = value })
-        } else {
-          el.textContent = value
+        if (isRtlRow(row, locale)) {
+          applyRtlText(el)
+          warn({ type: 'rtl', layer: rawId, message: 'applied RTL text direction' })
         }
+
+        fitText(el, value, (warning) => warn({ ...warning, layer: rawId }))
       } else {
         // color layer
         if (!isValidCssColor(value)) {
-          onWarning({ row: i + 1, layer: rawId, value })
+          warn({ type: 'color', layer: rawId, value })
           continue
         }
         if (el.hasAttribute('fill')) {
@@ -103,7 +160,7 @@ export async function generateBatch({
 
     results.push({ name: filename, content })
 
-    onProgress(i + 1, rows.length)
+    onProgress(i + 1, rowsToGenerate.length)
 
     const now = performance.now()
     if (now - lastPreviewAt >= 50) {
@@ -116,17 +173,18 @@ export async function generateBatch({
     }
   }
 
-  // Bundle ZIP and download
+  // Return a preview-safe slice (avoid holding all large SVGs in memory)
+  return results.slice(0, previewLimit)
+}
+
+export async function downloadZip(results, filename = 'batch.zip') {
   const zip = new JSZip()
   results.forEach((r) => zip.file(r.name, r.content))
   const blob = await zip.generateAsync({ type: 'blob' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'batch.zip'
+  a.download = filename
   a.click()
   URL.revokeObjectURL(url)
-
-  // Return a preview-safe slice (avoid holding all large SVGs in memory)
-  return results.slice(0, previewLimit)
 }

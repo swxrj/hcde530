@@ -19,12 +19,17 @@ function nodeNameMatches(node, q) {
   return `${node.name ?? ''} ${node.rawId ?? ''}`.toLowerCase().includes(q)
 }
 
-function layerMatches(node, mapping, filter, q) {
+function hasVisibilityRule(node, visibilityRules) {
+  const rule = node.rawId ? visibilityRules[node.rawId] : null
+  return Boolean(rule && rule.mode !== 'always')
+}
+
+function layerMatches(node, mapping, visibilityRules, filter, q) {
   if (node.kind !== 'layer') return false
 
   const searchable = `${node.name ?? ''} ${node.rawId ?? ''}`.toLowerCase()
   const m = node.rawId ? mapping[node.rawId] : null
-  const isMapped = m?.source === 'csv' || m?.source === 'manual'
+  const isMapped = m?.source === 'csv' || m?.source === 'manual' || hasVisibilityRule(node, visibilityRules)
 
   if (filter === 'all' && q && !searchable.includes(q)) return false
   if (filter === 'text' && node.elementType !== 'text') return false
@@ -35,13 +40,13 @@ function layerMatches(node, mapping, filter, q) {
   return true
 }
 
-function filterTree(nodes, mapping, filter, q, selectedNodeId) {
+function filterTree(nodes, mapping, visibilityRules, filter, q, selectedNodeId) {
   return nodes.reduce((acc, node) => {
     const isSelected = node.nodeId === selectedNodeId
 
     if (node.kind === 'layer') {
-      const matches = layerMatches(node, mapping, filter, q)
-      const selectedChildren = filterTree(node.children ?? [], mapping, filter, q, selectedNodeId)
+      const matches = layerMatches(node, mapping, visibilityRules, filter, q)
+      const selectedChildren = filterTree(node.children ?? [], mapping, visibilityRules, filter, q, selectedNodeId)
       const filteredChildren = matches
         ? (node.children ?? [])
         : selectedChildren
@@ -54,12 +59,14 @@ function filterTree(nodes, mapping, filter, q, selectedNodeId) {
 
     const searchable = `${node.name ?? ''} ${node.rawId ?? ''}`.toLowerCase()
     const groupMatches = q && searchable.includes(q)
-    const selectedChildren = filterTree(node.children ?? [], mapping, filter, q, selectedNodeId)
+    const groupHasRule = hasVisibilityRule(node, visibilityRules)
+    const mappedGroupMatches = filter === 'mapped' && groupHasRule && (!q || groupMatches)
+    const selectedChildren = filterTree(node.children ?? [], mapping, visibilityRules, filter, q, selectedNodeId)
     const filteredChildren = groupMatches
       ? (node.children ?? [])
       : selectedChildren
 
-    if (isSelected || filteredChildren.length > 0 || (filter === 'all' && (!q || groupMatches))) {
+    if (isSelected || mappedGroupMatches || filteredChildren.length > 0 || (filter === 'all' && (!q || groupMatches))) {
       acc.push({ ...node, children: filteredChildren })
     }
 
@@ -350,6 +357,7 @@ function TreeNodes({ nodes, depth, expanded, onToggle, registerNode, forceOpen, 
 export default function LayerList({ search = '', filter = 'all' }) {
   const layerTree = useStore((s) => s.layerTree)
   const mapping = useStore((s) => s.mapping)
+  const visibilityRules = useStore((s) => s.visibilityRules)
   const selectedNodeId = useStore((s) => s.selectedNodeId)
   const selectionTick = useStore((s) => s.selectionTick)
   const [expanded, setExpanded] = useState({})
@@ -362,11 +370,11 @@ export default function LayerList({ search = '', filter = 'all' }) {
     [layerTree, selectedNodeId],
   )
   const selectedMapping = selectedNode?.rawId ? mapping[selectedNode.rawId] : null
-  const selectedIsMapped = selectedMapping?.source === 'csv' || selectedMapping?.source === 'manual'
+  const selectedIsMapped = selectedMapping?.source === 'csv' || selectedMapping?.source === 'manual' || hasVisibilityRule(selectedNode ?? {}, visibilityRules)
   const revealedNodeId = q || (filter === 'mapped' && !selectedIsMapped) ? null : selectedNodeId
   const visible = useMemo(
-    () => filterTree(layerTree, mapping, filter, q, revealedNodeId),
-    [layerTree, mapping, filter, q, revealedNodeId],
+    () => filterTree(layerTree, mapping, visibilityRules, filter, q, revealedNodeId),
+    [layerTree, mapping, visibilityRules, filter, q, revealedNodeId],
   )
 
   useEffect(() => {

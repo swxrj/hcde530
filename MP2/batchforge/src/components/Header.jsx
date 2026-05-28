@@ -10,8 +10,8 @@ export default function Header() {
   const running = useStore((s) => s.generation.running)
   const run = useStore((s) => s.run)
   const cancel = useStore((s) => s.cancel)
+  const downloadAll = useStore((s) => s.downloadAll)
   const previewResults = useStore((s) => s.previewResults)
-  const openPreviewModal = useStore((s) => s.openPreviewModal)
 
   const canRun = !!docString && csvRows.length > 0 && !running
   const primary = csvHeaders[0]
@@ -65,9 +65,9 @@ export default function Header() {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.96 }}
             className="bf-btn-ghost"
-            onClick={openPreviewModal}
+            onClick={run}
           >
-            Preview results
+            Preview
           </motion.button>
         )}
 
@@ -85,9 +85,9 @@ export default function Header() {
             whileTap={canRun ? { scale: 0.96 } : {}}
             className="bf-btn-primary"
             disabled={!canRun}
-            onClick={run}
+            onClick={previewResults.length > 0 ? downloadAll : run}
           >
-            Run
+            {previewResults.length > 0 ? 'Download ZIP' : 'Preview'}
           </motion.button>
         )}
       </div>
