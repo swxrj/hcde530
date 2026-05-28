@@ -1,15 +1,240 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-/* Override DaisyUI light theme — sky blue primary */
+/* ─── Theme overrides ─────────────────────────────────── */
 [data-theme="light"] {
   --color-primary: oklch(62% 0.19 220);
-  --color-primary-content: oklch(98% 0.01 220);
+  --color-primary-content: oklch(99% 0.005 220);
   --color-primary-focus: oklch(54% 0.18 220);
+  --color-base-100: oklch(99% 0.006 220);
+  --color-base-200: oklch(95.5% 0.012 220);
+  --color-base-300: oklch(91% 0.018 220);
+  --color-base-content: oklch(21% 0.055 245);
 }
 
-/* Smooth scrollbars */
+/* ─── Design tokens ───────────────────────────────────── */
+:root {
+  --ink: rgb(26, 43, 74);
+  --ink-60: rgba(26,43,74,0.6);
+  --ink-35: rgba(26,43,74,0.35);
+  --ink-15: rgba(26,43,74,0.15);
+  --sky: rgb(14,165,233);
+  --sky-30: rgba(14,165,233,0.3);
+  --sky-50: rgba(14,165,233,0.5);
+  --white-55: rgba(255,255,255,0.55);
+  --white-80: rgba(255,255,255,0.8);
+}
+
+/* ─── Scrollbar ───────────────────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: oklch(80% 0 0) transparent;
+  scrollbar-color: rgba(14,165,233,0.22) transparent;
+}
+
+/* ─── Floating glass CTA (Run) ────────────────────────── */
+.bf-btn-primary {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 0 22px; height: 36px;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 650; letter-spacing: 0.015em;
+  color: #fff;
+  background: linear-gradient(158deg, rgba(56,189,248,0.78) 0%, rgba(14,165,233,0.68) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.58);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.52) inset,
+    0 -1px 0 rgba(14,165,233,0.22) inset,
+    0 4px 15px rgba(14,165,233,0.29),
+    0 2px 4px rgba(14,165,233,0.2),
+    0 1px 2px rgba(26,43,74,0.08);
+  cursor: pointer;
+  transition: box-shadow 0.14s ease, transform 0.1s ease, opacity 0.14s;
+  user-select: none; white-space: nowrap;
+}
+.bf-btn-primary:hover:not(:disabled) {
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.6) inset,
+    0 -1px 0 rgba(14,165,233,0.28) inset,
+    0 7px 21px rgba(14,165,233,0.36),
+    0 3px 8px rgba(14,165,233,0.22),
+    0 1px 3px rgba(26,43,74,0.1);
+  transform: translateY(-1px);
+}
+.bf-btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.35) inset,
+    0 2px 8px rgba(14,165,233,0.22);
+}
+.bf-btn-primary:disabled { opacity: 0.36; cursor: not-allowed; transform: none; }
+
+/* ─── Ghost floating button (Preview, secondary) ──────── */
+.bf-btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 0 18px; height: 36px;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 500;
+  color: var(--ink-60);
+  background: rgba(255,255,255,0.48);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.58);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.48) inset,
+    0 3px 10px rgba(26,43,74,0.06),
+    0 1px 2px rgba(26,43,74,0.04);
+  cursor: pointer;
+  transition: box-shadow 0.14s ease, transform 0.1s ease;
+  user-select: none; white-space: nowrap;
+}
+.bf-btn-ghost:hover {
+  background: rgba(255,255,255,0.62);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.58) inset,
+    0 5px 16px rgba(26,43,74,0.09),
+    0 2px 4px rgba(26,43,74,0.05);
+  transform: translateY(-1px);
+}
+.bf-btn-ghost:active { transform: translateY(1px); }
+
+/* ─── Danger button (Cancel) ──────────────────────────── */
+.bf-btn-danger {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 20px; height: 36px;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 650;
+  color: #fff;
+  background: linear-gradient(158deg, rgba(248,113,113,0.7) 0%, rgba(220,38,38,0.6) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.42);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.38) inset,
+    0 5px 18px rgba(220,38,38,0.32),
+    0 1px 4px rgba(220,38,38,0.2);
+  cursor: pointer;
+  transition: box-shadow 0.14s ease, transform 0.1s ease;
+  user-select: none;
+}
+.bf-btn-danger:hover { transform: translateY(-1px); }
+.bf-btn-danger:active { transform: translateY(1px); }
+
+/* ─── Glass panels (sidebars, header) ─────────────────── */
+.bf-panel {
+  background: rgba(255,255,255,0.62);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+/* ─── Inset surface (below/recessed) ─────────────────── */
+.bf-inset {
+  background: rgba(26,43,74,0.042);
+  box-shadow:
+    inset 0 2px 7px rgba(26,43,74,0.09),
+    inset 0 1px 2px rgba(26,43,74,0.05);
+  border: 1px solid rgba(26,43,74,0.07);
+}
+
+/* ─── Float card (above surface) ─────────────────────── */
+.bf-float {
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.65);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.58) inset,
+    0 8px 32px rgba(26,43,74,0.08),
+    0 2px 8px rgba(26,43,74,0.05),
+    0 1px 2px rgba(26,43,74,0.03);
+}
+
+/* ─── Upload card — empty (inset) ─────────────────────── */
+.bf-upload-empty {
+  background: rgba(14,165,233,0.04);
+  border: 1.5px dashed rgba(14,165,233,0.38) !important;
+  box-shadow:
+    inset 0 2px 8px rgba(14,165,233,0.08),
+    inset 0 1px 2px rgba(26,43,74,0.04);
+}
+
+/* ─── Upload card — loaded (floating glass) ───────────── */
+.bf-upload-loaded {
+  background: linear-gradient(148deg, rgba(56,189,248,0.72) 0%, rgba(14,165,233,0.62) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.52) !important;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.48) inset,
+    0 -1px 0 rgba(14,165,233,0.22) inset,
+    0 6px 20px rgba(14,165,233,0.22),
+    0 2px 7px rgba(14,165,233,0.14),
+    0 1px 2px rgba(26,43,74,0.06);
+}
+
+/* ─── Filter pill — active (float, matches Run button style) ─ */
+.bf-filter-active {
+  background: linear-gradient(158deg, rgba(56,189,248,0.72) 0%, rgba(14,165,233,0.62) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.52) inset,
+    0 -1px 0 rgba(14,165,233,0.18) inset,
+    0 4px 14px rgba(14,165,233,0.32),
+    0 1px 4px rgba(14,165,233,0.2);
+}
+
+/* ─── Inset input/select ──────────────────────────────── */
+.bf-input {
+  background: rgba(26,43,74,0.04) !important;
+  border: 1px solid rgba(26,43,74,0.1) !important;
+  box-shadow:
+    inset 0 2px 5px rgba(26,43,74,0.07),
+    inset 0 1px 2px rgba(26,43,74,0.04) !important;
+  color: var(--ink) !important;
+  border-radius: 12px !important;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.bf-input:focus {
+  border-color: rgba(14,165,233,0.4) !important;
+  box-shadow:
+    inset 0 2px 5px rgba(26,43,74,0.05),
+    0 0 0 3px rgba(14,165,233,0.13) !important;
+  outline: none !important;
+}
+
+/* ─── Layer item — hover (CSS only, no JS style leak) ─── */
+.bf-layer-item {
+  border: 1px solid transparent;
+}
+.bf-layer-item:hover {
+  background: rgba(26,43,74,0.05);
+}
+
+.bf-tree-line {
+  background: rgba(26,43,74,0.16);
+}
+
+/* ─── SVG canvas container glass edge vignette ────────── */
+.bf-canvas-wrap {
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(255,255,255,0.6);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.6) inset,
+    0 16px 48px rgba(26,43,74,0.1),
+    0 4px 16px rgba(26,43,74,0.06),
+    0 1px 3px rgba(26,43,74,0.04);
+}
+
+/* ─── Modal backdrop ──────────────────────────────────── */
+.bf-modal-card {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.58);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.55) inset,
+    0 24px 80px rgba(26,43,74,0.18),
+    0 8px 24px rgba(26,43,74,0.1),
+    0 2px 6px rgba(26,43,74,0.06);
 }

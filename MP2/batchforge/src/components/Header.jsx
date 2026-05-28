@@ -3,8 +3,8 @@ import { useStore } from '../store/useStore'
 
 export default function Header() {
   const csvHeaders = useStore((s) => s.csvHeaders)
-  const filenameColumn = useStore((s) => s.filenameColumn)
-  const setFilenameColumn = useStore((s) => s.setFilenameColumn)
+  const filenameFormat = useStore((s) => s.filenameFormat)
+  const setFilenameFormat = useStore((s) => s.setFilenameFormat)
   const csvRows = useStore((s) => s.csvRows)
   const docString = useStore((s) => s.docString)
   const running = useStore((s) => s.generation.running)
@@ -14,43 +14,57 @@ export default function Header() {
   const openPreviewModal = useStore((s) => s.openPreviewModal)
 
   const canRun = !!docString && csvRows.length > 0 && !running
+  const primary = csvHeaders[0]
+  const secondary = csvHeaders[1]
+  const filenamePresets = [
+    { label: 'Auto numbering', value: '' },
+    primary && { label: primary, value: `{{${primary}}}` },
+    primary && { label: `${primary} + row`, value: `{{${primary}}}-{{row}}` },
+    primary && secondary && { label: `${primary} + ${secondary}`, value: `{{${primary}}}-{{${secondary}}}` },
+    primary && secondary && { label: `${primary} + ${secondary} + row`, value: `{{${primary}}}-{{${secondary}}}-{{row}}` },
+    { label: 'Row number only', value: 'output-{{row}}' },
+  ].filter(Boolean)
 
   return (
-    <header className="h-16 border-b border-base-300 bg-base-100 px-8 flex items-center justify-between gap-4 shrink-0 shadow-sm">
-      <div className="flex items-center gap-2.5">
-        <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-          <svg className="w-4 h-4 text-primary-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1.5" />
-            <rect x="14" y="3" width="7" height="7" rx="1.5" />
-            <rect x="3" y="14" width="7" height="7" rx="1.5" />
-            <rect x="14" y="14" width="7" height="7" rx="1.5" />
-          </svg>
-        </div>
-        <span className="font-semibold text-[15px] tracking-tight">BatchForge</span>
-      </div>
-
+    <header
+      className="bf-panel h-16 px-8 flex items-center justify-end gap-4 shrink-0"
+      style={{ borderBottom: '1px solid rgba(255,255,255,0.42)' }}
+    >
       <div className="flex items-center gap-3">
         {csvHeaders.length > 0 && (
-          <label className="flex items-center gap-2 text-sm">
-            <span className="text-base-content/40 text-xs">Filename column</span>
-            <select
-              className="select select-sm select-bordered rounded-xl"
-              value={filenameColumn ?? ''}
-              onChange={(e) => setFilenameColumn(e.target.value || null)}
-            >
-              <option value="">Auto (output_001.svg)</option>
-              {csvHeaders.map((h) => (
-                <option key={h} value={h}>{h}</option>
+          <div className="flex items-center gap-2.5 text-sm">
+            <label htmlFor="filename-format" className="text-[11px] font-medium" style={{ color: 'var(--ink-35)' }}>
+              Filename format
+            </label>
+            <input
+              id="filename-format"
+              list="filename-format-presets"
+              className="bf-input text-sm h-8 px-3 w-64"
+              value={filenameFormat}
+              placeholder="Auto (output_001.svg)"
+              onChange={(e) => setFilenameFormat(e.target.value)}
+              title="Use CSV columns like {{name}} and {{team}}, plus {{row}} for row number."
+            />
+            <datalist id="filename-format-presets">
+              {filenamePresets.map((preset) => (
+                <option key={`${preset.label}-${preset.value}`} value={preset.value}>
+                  {preset.label}
+                </option>
               ))}
-            </select>
-          </label>
+              {csvHeaders.map((h) => (
+                <option key={h} value={`{{${h}}}`}>
+                  {h}
+                </option>
+              ))}
+            </datalist>
+          </div>
         )}
 
         {previewResults.length > 0 && !running && (
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="btn btn-sm btn-ghost rounded-xl"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
+            className="bf-btn-ghost"
             onClick={openPreviewModal}
           >
             Preview results
@@ -59,17 +73,17 @@ export default function Header() {
 
         {running ? (
           <motion.button
-            whileTap={{ scale: 0.97 }}
-            className="btn btn-sm btn-error rounded-xl"
+            whileTap={{ scale: 0.96 }}
+            className="bf-btn-danger"
             onClick={cancel}
           >
             Cancel
           </motion.button>
         ) : (
           <motion.button
-            whileHover={canRun ? { scale: 1.03 } : {}}
+            whileHover={canRun ? { scale: 1.04 } : {}}
             whileTap={canRun ? { scale: 0.96 } : {}}
-            className="btn btn-sm btn-primary rounded-xl px-5 shadow-sm"
+            className="bf-btn-primary"
             disabled={!canRun}
             onClick={run}
           >

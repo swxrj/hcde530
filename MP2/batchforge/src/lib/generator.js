@@ -14,6 +14,19 @@ function sanitizeFilename(s) {
   return s.replace(/[^a-z0-9_\-]+/gi, '_').replace(/^_+|_+$/g, '')
 }
 
+function renderFilenameFormat(format, row, index) {
+  if (!format?.trim()) return `output_${String(index + 1).padStart(3, '0')}`
+
+  const rendered = format.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, token) => {
+    const key = token.trim()
+    if (key === 'row') return String(index + 1).padStart(3, '0')
+    if (key === 'index') return String(index + 1)
+    return row[key] ?? ''
+  })
+
+  return sanitizeFilename(rendered) || `output_${String(index + 1).padStart(3, '0')}`
+}
+
 /**
  * Generate one SVG per row, then bundle into a ZIP and trigger download.
  */
@@ -21,7 +34,7 @@ export async function generateBatch({
   templateString,
   rows,
   mapping,
-  filenameColumn,
+  filenameFormat,
   previewLimit = 50,
   onProgress,
   onPreview,
@@ -75,14 +88,14 @@ export async function generateBatch({
       }
     }
 
+    doc.querySelectorAll('[data-bf-node-id]').forEach((el) => {
+      el.removeAttribute('data-bf-node-id')
+    })
+
     const content = new XMLSerializer().serializeToString(doc)
 
     // Determine filename
-    let baseName = `output_${String(i + 1).padStart(3, '0')}`
-    if (filenameColumn) {
-      const cell = (row[filenameColumn] ?? '').trim()
-      if (cell) baseName = sanitizeFilename(cell)
-    }
+    const baseName = renderFilenameFormat(filenameFormat, row, i)
     const key = baseName.toLowerCase()
     const count = (usedNames.get(key) ?? 0) + 1
     usedNames.set(key, count)

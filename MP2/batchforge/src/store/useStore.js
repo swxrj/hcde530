@@ -10,14 +10,17 @@ export const useStore = create((set, get) => ({
   svgText: null,
   docString: null,
   layers: [],
+  layerTree: [],
 
   // Selection
+  selectedNodeId: null,
   selectedRawId: null,
+  selectionTick: 0,
 
   // CSV state
   csvHeaders: [],
   csvRows: [],
-  filenameColumn: null,
+  filenameFormat: '',
 
   // Mapping: { [rawId]: { source: 'csv'|'manual'|'none', column?, value? } }
   mapping: {},
@@ -40,15 +43,18 @@ export const useStore = create((set, get) => ({
 
   // Actions
   loadSvg: (text) => {
-    const { docString, layers } = parseSvg(text)
+    const { docString, layers, layerTree } = parseSvg(text)
     const { csvHeaders } = get()
     const mapping = autoMap(layers, csvHeaders)
     set({
       svgText: text,
       docString,
       layers,
+      layerTree,
       mapping,
+      selectedNodeId: null,
       selectedRawId: null,
+      selectionTick: 0,
       generation: { running: false, currentIndex: 0, total: 0, previewSvg: null, warnings: [] },
     })
   },
@@ -61,7 +67,7 @@ export const useStore = create((set, get) => ({
       csvHeaders: headers,
       csvRows: rows,
       mapping,
-      filenameColumn: null,
+      filenameFormat: '',
     })
   },
 
@@ -75,12 +81,18 @@ export const useStore = create((set, get) => ({
     }))
   },
 
-  setFilenameColumn: (col) => set({ filenameColumn: col }),
+  setFilenameFormat: (format) => set({ filenameFormat: format }),
 
-  selectLayer: (rawId) => set({ selectedRawId: rawId }),
+  selectNode: (nodeId, rawId = null) => set((s) => ({
+    selectedNodeId: nodeId,
+    selectedRawId: rawId,
+    selectionTick: s.selectionTick + 1,
+  })),
+
+  selectLayer: (rawId) => set((s) => ({ selectedRawId: rawId, selectionTick: s.selectionTick + 1 })),
 
   run: async () => {
-    const { docString, csvRows, mapping, filenameColumn } = get()
+    const { docString, csvRows, mapping, filenameFormat } = get()
     if (!docString || csvRows.length === 0) return
 
     cancelFlag = false
@@ -104,7 +116,7 @@ export const useStore = create((set, get) => ({
     }
 
     try {
-      const previewResults = await generateBatch({ templateString: docString, rows: csvRows, mapping, filenameColumn, previewLimit: 50, onProgress, onPreview, onWarning })
+      const previewResults = await generateBatch({ templateString: docString, rows: csvRows, mapping, filenameFormat, previewLimit: 50, onProgress, onPreview, onWarning })
       set({ previewResults, previewModalOpen: true })
       const { generation } = get()
       const warnCount = generation.warnings.length

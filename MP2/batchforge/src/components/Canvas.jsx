@@ -1,15 +1,19 @@
-import { useRef, useLayoutEffect, useState, useCallback, useEffect } from 'react'
+import { useRef, useLayoutEffect, useState, useCallback, useEffect, useMemo } from 'react'
 import { motion } from 'motion/react'
 import { useStore } from '../store/useStore'
 import EmptyState from './EmptyState'
 
-function Overlays({ svgWrapRef, layers, selectedRawId, onSelect }) {
+function flattenNodes(nodes) {
+  return nodes.flatMap((node) => [node, ...flattenNodes(node.children ?? [])])
+}
+
+function Overlays({ svgWrapRef, nodes, selectedNodeId, onSelect }) {
   const [rects, setRects] = useState([])
   const [hoveredId, setHoveredId] = useState(null)
 
   const compute = useCallback(() => {
     const wrapper = svgWrapRef.current
-    if (!wrapper || layers.length === 0) { setRects([]); return }
+    if (!wrapper || nodes.length === 0) { setRects([]); return }
 
     const svgEl = wrapper.querySelector('svg')
     if (!svgEl) { setRects([]); return }
@@ -24,11 +28,8 @@ function Overlays({ svgWrapRef, layers, selectedRawId, onSelect }) {
     const dy = br.top - wrapBr.top
 
     const next = []
-    for (const layer of layers) {
-      const el =
-        wrapper.querySelector(`[data-name="${CSS.escape(layer.rawId)}"]`) ||
-        wrapper.querySelector(`[inkscape\\:label="${CSS.escape(layer.rawId)}"]`) ||
-        wrapper.querySelector(`#${CSS.escape(layer.rawId)}`)
+    for (const node of nodes) {
+      const el = wrapper.querySelector(`[data-bf-node-id="${CSS.escape(node.nodeId)}"]`)
 
       if (!el || typeof el.getBBox !== 'function') continue
       let bbox
@@ -36,7 +37,7 @@ function Overlays({ svgWrapRef, layers, selectedRawId, onSelect }) {
       if (bbox.width === 0 && bbox.height === 0) continue
 
       next.push({
-        rawId: layer.rawId,
+        nodeId: node.nodeId,
         x: dx + bbox.x * scaleX,
         y: dy + bbox.y * scaleY,
         w: bbox.width * scaleX,
@@ -44,7 +45,7 @@ function Overlays({ svgWrapRef, layers, selectedRawId, onSelect }) {
       })
     }
     setRects(next)
-  }, [layers, svgWrapRef])
+  }, [nodes, svgWrapRef])
 
   useLayoutEffect(() => { compute() }, [compute])
 
@@ -58,17 +59,23 @@ function Overlays({ svgWrapRef, layers, selectedRawId, onSelect }) {
   return (
     <div className="absolute inset-0 pointer-events-none">
       {rects.map((r) => {
-        const isSelected = r.rawId === selectedRawId
-        const isHovered = r.rawId === hoveredId
+        const isSelected = r.nodeId === selectedNodeId
+        const isHovered = r.nodeId === hoveredId
         const active = isSelected || isHovered
 
         return (
           <motion.div
-            key={r.rawId}
+            key={r.nodeId}
             className="absolute pointer-events-auto cursor-pointer"
             animate={{
-              borderColor: isSelected ? 'rgba(14,165,233,0.9)' : active ? 'rgba(14,165,233,0.55)' : 'transparent',
-              boxShadow: isSelected ? '0 0 0 3px rgba(14,165,233,0.18)' : 'none',
+              borderColor: isSelected
+                ? 'rgba(14,165,233,0.9)'
+                : active
+                ? 'rgba(14,165,233,0.55)'
+                : 'transparent',
+              boxShadow: isSelected
+                ? '0 0 0 3px rgba(14,165,233,0.18), 0 4px 16px rgba(14,165,233,0.2)'
+                : 'none',
             }}
             transition={{ duration: 0.12 }}
             style={{
@@ -81,9 +88,9 @@ function Overlays({ svgWrapRef, layers, selectedRawId, onSelect }) {
               borderStyle: isSelected ? 'solid' : 'dashed',
               boxSizing: 'border-box',
             }}
-            onMouseEnter={() => setHoveredId(r.rawId)}
+            onMouseEnter={() => setHoveredId(r.nodeId)}
             onMouseLeave={() => setHoveredId(null)}
-            onClick={() => onSelect(r.rawId)}
+            onClick={() => onSelect(r.nodeId)}
           />
         )
       })}
@@ -93,41 +100,42 @@ function Overlays({ svgWrapRef, layers, selectedRawId, onSelect }) {
 
 export default function Canvas() {
   const docString = useStore((s) => s.docString)
-  const layers = useStore((s) => s.layers)
-  const selectedRawId = useStore((s) => s.selectedRawId)
-  const selectLayer = useStore((s) => s.selectLayer)
+  const layerTree = useStore((s) => s.layerTree)
+  const selectedNodeId = useStore((s) => s.selectedNodeId)
+  const selectNode = useStore((s) => s.selectNode)
   const generation = useStore((s) => s.generation)
 
   const svgWrapRef = useRef()
+  const nodes = useMemo(() => flattenNodes(layerTree), [layerTree])
 
   const displaySvg = generation.running && generation.previewSvg
     ? generation.previewSvg
     : docString
 
-  const handleSelect = useCallback((rawId) => selectLayer(rawId), [selectLayer])
+  const handleSelect = useCallback((nodeId) => selectNode(nodeId), [selectNode])
 
   if (!displaySvg) {
     return (
-      <div className="flex-1 grid place-items-center bg-base-200">
+      <div className="flex-1 grid place-items-center">
         <EmptyState message="Upload an SVG template to preview it here." />
       </div>
     )
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-base-200 p-12 overflow-hidden min-h-0">
+    <div className="flex-1 flex items-center justify-center p-12 overflow-hidden min-h-0">
       <div className="relative flex items-center justify-center max-w-full max-h-full">
         <div
           ref={svgWrapRef}
-          className="rounded-2xl overflow-hidden shadow-md bg-white ring-1 ring-black/5 [&_svg]:block [&_svg]:max-w-full [&_svg]:max-h-[calc(100vh-14rem)]"
+          className="bf-canvas-wrap rounded-2xl overflow-hidden [&_svg]:block [&_svg]:max-w-full [&_svg]:max-h-[calc(100vh-14rem)]"
           dangerouslySetInnerHTML={{ __html: displaySvg }}
         />
 
-        {!generation.running && layers.length > 0 && (
+        {!generation.running && nodes.length > 0 && (
           <Overlays
             svgWrapRef={svgWrapRef}
-            layers={layers}
-            selectedRawId={selectedRawId}
+            nodes={nodes}
+            selectedNodeId={selectedNodeId}
             onSelect={handleSelect}
           />
         )}

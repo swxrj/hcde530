@@ -8,15 +8,23 @@ export default function StatusBar() {
   if (!running && csvRows.length === 0) return null
 
   return (
-    <footer className="h-11 border-t border-base-300 bg-base-100 px-8 flex items-center gap-4 text-xs text-base-content/50 shrink-0">
+    <footer
+      className="bf-panel h-11 px-8 flex items-center gap-4 text-xs shrink-0"
+      style={{ borderTop: '1px solid rgba(255,255,255,0.42)', color: 'var(--ink-35)' }}
+    >
       {running ? (
         <>
           <ProgressBar current={currentIndex} total={total} />
-          <span className="shrink-0 tabular-nums font-mono text-[11px]">
+          <span
+            className="shrink-0 tabular-nums font-mono text-[11px]"
+            style={{ color: 'var(--ink-60)' }}
+          >
             {currentIndex.toLocaleString()} / {total.toLocaleString()}
           </span>
           {warnings.length > 0 && (
-            <span className="text-warning shrink-0">{warnings.length} warning{warnings.length !== 1 ? 's' : ''}</span>
+            <span className="shrink-0 text-[11px]" style={{ color: 'rgba(217,119,6,0.8)' }}>
+              {warnings.length} warning{warnings.length !== 1 ? 's' : ''}
+            </span>
           )}
         </>
       ) : (
