@@ -1,10 +1,13 @@
 import { motion } from 'motion/react'
 import { useStore } from '../store/useStore'
+import { downloadButtonLabel } from '../lib/export'
 
 export default function Header() {
   const csvHeaders = useStore((s) => s.csvHeaders)
   const filenameFormat = useStore((s) => s.filenameFormat)
   const setFilenameFormat = useStore((s) => s.setFilenameFormat)
+  const exportFormat = useStore((s) => s.exportFormat)
+  const setExportFormat = useStore((s) => s.setExportFormat)
   const csvRows = useStore((s) => s.csvRows)
   const docString = useStore((s) => s.docString)
   const running = useStore((s) => s.generation.running)
@@ -32,32 +35,50 @@ export default function Header() {
     >
       <div className="flex items-center gap-3">
         {csvHeaders.length > 0 && (
-          <div className="flex items-center gap-2.5 text-sm">
-            <label htmlFor="filename-format" className="text-[11px] font-medium" style={{ color: 'var(--ink-35)' }}>
-              Filename format
-            </label>
-            <input
-              id="filename-format"
-              list="filename-format-presets"
-              className="bf-input text-sm h-8 px-3 w-64"
-              value={filenameFormat}
-              placeholder="Auto (output_001.svg)"
-              onChange={(e) => setFilenameFormat(e.target.value)}
-              title="Use CSV columns like {{name}} and {{team}}, plus {{row}} for row number."
-            />
-            <datalist id="filename-format-presets">
-              {filenamePresets.map((preset) => (
-                <option key={`${preset.label}-${preset.value}`} value={preset.value}>
-                  {preset.label}
-                </option>
-              ))}
-              {csvHeaders.map((h) => (
-                <option key={h} value={`{{${h}}}`}>
-                  {h}
-                </option>
-              ))}
-            </datalist>
-          </div>
+          <>
+            <div className="flex items-center gap-2.5 text-sm">
+              <label htmlFor="export-format" className="text-[11px] font-medium" style={{ color: 'var(--ink-35)' }}>
+                Export as
+              </label>
+              <select
+                id="export-format"
+                className="bf-input bf-select text-sm h-8 px-3 w-36 cursor-pointer"
+                value={exportFormat}
+                onChange={(e) => setExportFormat(e.target.value)}
+              >
+                <option value="svg">SVG (ZIP)</option>
+                <option value="png">PNG (ZIP)</option>
+                <option value="pdf">PDF</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2.5 text-sm">
+              <label htmlFor="filename-format" className="text-[11px] font-medium" style={{ color: 'var(--ink-35)' }}>
+                Filename format
+              </label>
+              <input
+                id="filename-format"
+                list="filename-format-presets"
+                className="bf-input text-sm h-8 px-3 w-64"
+                value={filenameFormat}
+                placeholder="Auto (output_001.svg)"
+                onChange={(e) => setFilenameFormat(e.target.value)}
+                title="Use CSV columns like {{name}} and {{team}}, plus {{row}} for row number."
+              />
+              <datalist id="filename-format-presets">
+                {filenamePresets.map((preset) => (
+                  <option key={`${preset.label}-${preset.value}`} value={preset.value}>
+                    {preset.label}
+                  </option>
+                ))}
+                {csvHeaders.map((h) => (
+                  <option key={h} value={`{{${h}}}`}>
+                    {h}
+                  </option>
+                ))}
+              </datalist>
+            </div>
+          </>
         )}
 
         {previewResults.length > 0 && !running && (
@@ -87,7 +108,7 @@ export default function Header() {
             disabled={!canRun}
             onClick={previewResults.length > 0 ? downloadAll : run}
           >
-            {previewResults.length > 0 ? 'Download ZIP' : 'Preview'}
+            {downloadButtonLabel(exportFormat, previewResults.length > 0)}
           </motion.button>
         )}
       </div>

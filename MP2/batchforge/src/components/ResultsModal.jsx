@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useStore } from '../store/useStore'
+import { downloadButtonLabel } from '../lib/export'
 
 export default function ResultsModal() {
   const open = useStore((s) => s.previewModalOpen)
@@ -7,6 +8,7 @@ export default function ResultsModal() {
   const results = useStore((s) => s.previewResults)
   const totalRows = useStore((s) => s.csvRows.length)
   const running = useStore((s) => s.generation.running)
+  const exportFormat = useStore((s) => s.exportFormat)
   const downloadAll = useStore((s) => s.downloadAll)
 
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -76,7 +78,7 @@ export default function ResultsModal() {
               onClick={downloadAll}
               disabled={running}
             >
-              {running ? 'Preparing ZIP…' : 'Download all'}
+              {running ? 'Preparing export…' : downloadButtonLabel(exportFormat, true)}
             </button>
             <button
               className="bf-btn-ghost w-9 h-9 p-0 rounded-full flex items-center justify-center text-sm"

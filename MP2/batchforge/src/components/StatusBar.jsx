@@ -3,10 +3,12 @@ import ProgressBar from './ProgressBar'
 import { warningMessage } from '../lib/validation'
 
 export default function StatusBar() {
-  const { running, currentIndex, total, warnings } = useStore((s) => s.generation)
+  const { running, currentIndex, total, warnings, phase } = useStore((s) => s.generation)
   const csvRows = useStore((s) => s.csvRows)
 
   if (!running && csvRows.length === 0) return null
+
+  const phaseLabel = phase === 'exporting' ? 'Exporting' : 'Generating'
 
   return (
     <footer
@@ -15,6 +17,9 @@ export default function StatusBar() {
     >
       {running ? (
         <>
+          <span className="shrink-0 text-[11px] font-semibold" style={{ color: 'var(--ink-60)' }}>
+            {phaseLabel}
+          </span>
           <ProgressBar current={currentIndex} total={total} />
           <span
             className="shrink-0 tabular-nums font-mono text-[11px]"

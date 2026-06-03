@@ -1,4 +1,3 @@
-import JSZip from 'jszip'
 import { isValidCssColor } from './colors'
 import { fitText } from './textFit'
 import { applyTextColor } from './textStyle'
@@ -200,16 +199,4 @@ export async function generateBatch({
 
   // Return a preview-safe slice (avoid holding all large SVGs in memory)
   return results.slice(0, previewLimit)
-}
-
-export async function downloadZip(results, filename = 'batch.zip') {
-  const zip = new JSZip()
-  results.forEach((r) => zip.file(r.name, r.content))
-  const blob = await zip.generateAsync({ type: 'blob' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
 }

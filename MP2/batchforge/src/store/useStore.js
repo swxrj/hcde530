@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { parseSvg } from '../lib/svgParser'
 import { parseCsv, autoMap } from '../lib/csvMapper'
-import { downloadZip, generateBatch } from '../lib/generator'
+import { generateBatch } from '../lib/generator'
+import { exportResults } from '../lib/export'
 import {
   anchorXForAlignment,
   getSvgFrame,
@@ -28,6 +29,7 @@ export const useStore = create((set, get) => ({
   csvHeaders: [],
   csvRows: [],
   filenameFormat: '',
+  exportFormat: 'svg',
   csvPreviewOpen: false,
   selectedCsvColumn: null,
 
@@ -45,6 +47,7 @@ export const useStore = create((set, get) => ({
     total: 0,
     previewSvg: null,
     warnings: [],
+    phase: null,
   },
 
   // Post-generation preview (first 50 results)
@@ -75,7 +78,7 @@ export const useStore = create((set, get) => ({
       selectedNodeId: null,
       selectedRawId: null,
       selectionTick: 0,
-      generation: { running: false, currentIndex: 0, total: 0, previewSvg: null, warnings: [] },
+      generation: { running: false, currentIndex: 0, total: 0, previewSvg: null, warnings: [], phase: null },
     })
   },
 
@@ -140,6 +143,8 @@ export const useStore = create((set, get) => ({
   },
 
   setFilenameFormat: (format) => set({ filenameFormat: format }),
+
+  setExportFormat: (format) => set({ exportFormat: format }),
 
   toggleMappingOverlay: () => {
     set((s) => ({ showMappingOverlay: !s.showMappingOverlay }))
@@ -266,22 +271,30 @@ export const useStore = create((set, get) => ({
         get().pushToast({ kind: 'error', text: `Error: ${e.message}` })
       }
     } finally {
-      set((s) => ({ generation: { ...s.generation, running: false } }))
+      set((s) => ({ generation: { ...s.generation, running: false, phase: null, warnings: [] } }))
     }
   },
 
   downloadAll: async () => {
-    const { docString, csvRows, mapping, visibilityRules, filenameFormat } = get()
+    const { docString, csvRows, mapping, visibilityRules, filenameFormat, exportFormat } = get()
     if (!docString || csvRows.length === 0) return
 
     cancelFlag = false
     set((s) => ({
-      generation: { ...s.generation, running: true, currentIndex: 0, total: csvRows.length, warnings: [], previewSvg: null },
+      generation: {
+        ...s.generation,
+        running: true,
+        currentIndex: 0,
+        total: csvRows.length,
+        warnings: [],
+        previewSvg: null,
+        phase: 'generating',
+      },
     }))
 
     const onProgress = (i, total) => {
       if (cancelFlag) throw new Error('cancelled')
-      set((s) => ({ generation: { ...s.generation, currentIndex: i, total } }))
+      set((s) => ({ generation: { ...s.generation, currentIndex: i, total, phase: 'generating' } }))
     }
 
     const onPreview = (svg) => {
@@ -294,18 +307,48 @@ export const useStore = create((set, get) => ({
       }))
     }
 
+    const onExportProgress = (i, total) => {
+      if (cancelFlag) throw new Error('cancelled')
+      set((s) => ({ generation: { ...s.generation, currentIndex: i, total, phase: 'exporting' } }))
+    }
+
     try {
-      const results = await generateBatch({ templateString: docString, rows: csvRows, mapping, visibilityRules, filenameFormat, previewLimit: csvRows.length, maxRows: csvRows.length, onProgress, onPreview, onWarning })
-      await downloadZip(results)
+      const results = await generateBatch({
+        templateString: docString,
+        rows: csvRows,
+        mapping,
+        visibilityRules,
+        filenameFormat,
+        previewLimit: csvRows.length,
+        maxRows: csvRows.length,
+        onProgress,
+        onPreview,
+        onWarning,
+      })
+
+      set((s) => ({
+        generation: { ...s.generation, currentIndex: 0, total: results.length, phase: 'exporting' },
+      }))
+
+      await exportResults(results, exportFormat, { onProgress: onExportProgress })
+
       const { generation } = get()
       const warnCount = generation.warnings.length
-      get().pushToast({ kind: 'success', text: `Downloaded ${results.length.toLocaleString()} SVGs · ${warnCount} warning${warnCount !== 1 ? 's' : ''}` })
+      const formatLabel = exportFormat === 'pdf'
+        ? 'PDF'
+        : exportFormat === 'png'
+          ? 'PNG ZIP'
+          : 'SVG ZIP'
+      get().pushToast({
+        kind: 'success',
+        text: `Downloaded ${results.length.toLocaleString()} as ${formatLabel} · ${warnCount} warning${warnCount !== 1 ? 's' : ''}`,
+      })
     } catch (e) {
       if (e.message !== 'cancelled') {
         get().pushToast({ kind: 'error', text: `Error: ${e.message}` })
       }
     } finally {
-      set((s) => ({ generation: { ...s.generation, running: false } }))
+      set((s) => ({ generation: { ...s.generation, running: false, phase: null, warnings: [] } }))
     }
   },
 

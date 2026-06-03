@@ -71,7 +71,6 @@ export function fitText(el, value, onWarning) {
 
   if (!box) {
     setTextValue(el, value)
-    onWarning?.({ type: 'missing-text-box' })
     return { fitted: false, overflow: false, layout }
   }
 
