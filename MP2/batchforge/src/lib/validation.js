@@ -1,29 +1,50 @@
-export function makeWarning(type, details = {}) {
-  return { type, ...details }
+/** Never surfaced — normal batch behavior or informational only. */
+const SILENT_WARNING_TYPES = new Set([
+  'missing-text-box',
+  'hidden-layer',
+  'rtl',
+])
+
+export function warningKey(warning) {
+  return [
+    warning.type,
+    warning.layer ?? '',
+    warning.field ?? '',
+    warning.value ?? '',
+    warning.message ?? '',
+  ].join('|')
 }
 
 export function warningMessage(warning) {
-  const row = warning.row ? `Row ${warning.row}: ` : ''
   const layer = warning.layer ? `${warning.layer}: ` : ''
 
   switch (warning.type) {
-    case 'missing-field':
-      return `${row}${layer}missing CSV field "${warning.field}"`
-    case 'hidden-layer':
-      return `${row}${layer}hidden by visibility rule`
+    case 'missing-layer':
+      return `${layer}layer not found in template`
     case 'invalid-rule':
-      return `${row}${layer}invalid visibility rule`
+      return `${layer}invalid visibility rule`
     case 'text-overflow':
-      return `${row}${layer}text was shortened to fit`
-    case 'missing-text-box':
-      return `${row}${layer}no text fit box found; used original text behavior`
-    case 'localization':
-      return `${row}${layer}used raw value because formatting failed`
-    case 'rtl':
-      return `${row}${layer}${warning.message ?? 'applied RTL behavior'}`
+      return `${layer}text does not fit in the defined box`
     case 'color':
-      return `${row}${layer}invalid color "${warning.value}"`
+      return `${layer}invalid color "${warning.value}"`
+    case 'localization':
+      return `${layer}could not format "${warning.field}" (${warning.message ?? 'invalid value'})`
     default:
-      return `${row}${layer}${warning.message ?? 'export warning'}`
+      return `${layer}${warning.message ?? 'generation issue'}`
+  }
+}
+
+/** Collect at most one warning per unique issue (not per CSV row). */
+export function createDedupedWarningHandler(onWarning) {
+  const seen = new Set()
+
+  return (warning) => {
+    if (SILENT_WARNING_TYPES.has(warning.type)) return
+
+    const key = warningKey(warning)
+    if (seen.has(key)) return
+    seen.add(key)
+
+    onWarning?.(warning)
   }
 }

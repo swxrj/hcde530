@@ -8,6 +8,8 @@ export default function Header() {
   const setFilenameFormat = useStore((s) => s.setFilenameFormat)
   const exportFormat = useStore((s) => s.exportFormat)
   const setExportFormat = useStore((s) => s.setExportFormat)
+  const exportPdfMode = useStore((s) => s.exportPdfMode)
+  const setExportPdfMode = useStore((s) => s.setExportPdfMode)
   const csvRows = useStore((s) => s.csvRows)
   const docString = useStore((s) => s.docString)
   const running = useStore((s) => s.generation.running)
@@ -51,6 +53,23 @@ export default function Header() {
                 <option value="pdf">PDF</option>
               </select>
             </div>
+
+            {exportFormat === 'pdf' && (
+              <div className="flex items-center gap-2.5 text-sm">
+                <label htmlFor="export-pdf-mode" className="text-[11px] font-medium" style={{ color: 'var(--ink-35)' }}>
+                  PDF layout
+                </label>
+                <select
+                  id="export-pdf-mode"
+                  className="bf-input bf-select text-sm h-8 px-3 w-44 cursor-pointer"
+                  value={exportPdfMode}
+                  onChange={(e) => setExportPdfMode(e.target.value)}
+                >
+                  <option value="combined">One PDF</option>
+                  <option value="individual">Separate PDFs (ZIP)</option>
+                </select>
+              </div>
+            )}
 
             <div className="flex items-center gap-2.5 text-sm">
               <label htmlFor="filename-format" className="text-[11px] font-medium" style={{ color: 'var(--ink-35)' }}>
@@ -108,7 +127,7 @@ export default function Header() {
             disabled={!canRun}
             onClick={previewResults.length > 0 ? downloadAll : run}
           >
-            {downloadButtonLabel(exportFormat, previewResults.length > 0)}
+            {downloadButtonLabel(exportFormat, previewResults.length > 0, exportPdfMode)}
           </motion.button>
         )}
       </div>

@@ -3,6 +3,7 @@ import { parseSvg } from '../lib/svgParser'
 import { parseCsv, autoMap } from '../lib/csvMapper'
 import { generateBatch } from '../lib/generator'
 import { exportResults } from '../lib/export'
+import { createDedupedWarningHandler } from '../lib/validation'
 import {
   anchorXForAlignment,
   getSvgFrame,
@@ -30,6 +31,7 @@ export const useStore = create((set, get) => ({
   csvRows: [],
   filenameFormat: '',
   exportFormat: 'svg',
+  exportPdfMode: 'combined',
   csvPreviewOpen: false,
   selectedCsvColumn: null,
 
@@ -146,6 +148,8 @@ export const useStore = create((set, get) => ({
 
   setExportFormat: (format) => set({ exportFormat: format }),
 
+  setExportPdfMode: (mode) => set({ exportPdfMode: mode }),
+
   toggleMappingOverlay: () => {
     set((s) => ({ showMappingOverlay: !s.showMappingOverlay }))
   },
@@ -254,18 +258,20 @@ export const useStore = create((set, get) => ({
       set((s) => ({ generation: { ...s.generation, previewSvg: svg } }))
     }
 
-    const onWarning = (w) => {
+    const onWarning = createDedupedWarningHandler((w) => {
       set((s) => ({
         generation: { ...s.generation, warnings: [...s.generation.warnings, w] },
       }))
-    }
+    })
 
     try {
       const previewResults = await generateBatch({ templateString: docString, rows: csvRows, mapping, visibilityRules, filenameFormat, previewLimit: 50, maxRows: previewCount, onProgress, onPreview, onWarning })
       set({ previewResults, previewModalOpen: true })
       const { generation } = get()
-      const warnCount = generation.warnings.length
-      get().pushToast({ kind: 'success', text: `Previewed ${previewResults.length.toLocaleString()} SVGs · ${warnCount} warning${warnCount !== 1 ? 's' : ''}` })
+      const suffix = generation.warnings.length > 0
+        ? ` · ${generation.warnings.length} issue${generation.warnings.length !== 1 ? 's' : ''}`
+        : ''
+      get().pushToast({ kind: 'success', text: `Previewed ${previewResults.length.toLocaleString()} SVGs${suffix}` })
     } catch (e) {
       if (e.message !== 'cancelled') {
         get().pushToast({ kind: 'error', text: `Error: ${e.message}` })
@@ -276,7 +282,7 @@ export const useStore = create((set, get) => ({
   },
 
   downloadAll: async () => {
-    const { docString, csvRows, mapping, visibilityRules, filenameFormat, exportFormat } = get()
+    const { docString, csvRows, mapping, visibilityRules, filenameFormat, exportFormat, exportPdfMode } = get()
     if (!docString || csvRows.length === 0) return
 
     cancelFlag = false
@@ -301,11 +307,11 @@ export const useStore = create((set, get) => ({
       set((s) => ({ generation: { ...s.generation, previewSvg: svg } }))
     }
 
-    const onWarning = (w) => {
+    const onWarning = createDedupedWarningHandler((w) => {
       set((s) => ({
         generation: { ...s.generation, warnings: [...s.generation.warnings, w] },
       }))
-    }
+    })
 
     const onExportProgress = (i, total) => {
       if (cancelFlag) throw new Error('cancelled')
@@ -330,18 +336,23 @@ export const useStore = create((set, get) => ({
         generation: { ...s.generation, currentIndex: 0, total: results.length, phase: 'exporting' },
       }))
 
-      await exportResults(results, exportFormat, { onProgress: onExportProgress })
+      await exportResults(results, exportFormat, {
+        onProgress: onExportProgress,
+        pdfMode: exportPdfMode,
+      })
 
       const { generation } = get()
-      const warnCount = generation.warnings.length
+      const suffix = generation.warnings.length > 0
+        ? ` · ${generation.warnings.length} issue${generation.warnings.length !== 1 ? 's' : ''}`
+        : ''
       const formatLabel = exportFormat === 'pdf'
-        ? 'PDF'
+        ? (exportPdfMode === 'individual' ? 'PDF ZIP' : 'PDF')
         : exportFormat === 'png'
           ? 'PNG ZIP'
           : 'SVG ZIP'
       get().pushToast({
         kind: 'success',
-        text: `Downloaded ${results.length.toLocaleString()} as ${formatLabel} · ${warnCount} warning${warnCount !== 1 ? 's' : ''}`,
+        text: `Downloaded ${results.length.toLocaleString()} as ${formatLabel}${suffix}`,
       })
     } catch (e) {
       if (e.message !== 'cancelled') {

@@ -33,7 +33,7 @@ export default function StatusBar() {
               style={{ color: 'rgba(217,119,6,0.8)' }}
               title={warnings.map(warningMessage).join('\n')}
             >
-              {warnings.length} warning{warnings.length !== 1 ? 's' : ''}
+              {warnings.length} issue{warnings.length !== 1 ? 's' : ''}
             </span>
           )}
         </>

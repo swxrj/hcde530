@@ -36,13 +36,12 @@ export function applyMirroredGroups(doc, row, onWarning) {
   value.split(',').map((item) => item.trim()).filter(Boolean).forEach((rawId) => {
     const el = getNamedElement(doc, rawId)
     if (!el) {
-      onWarning?.({ type: 'missing-field', layer: rawId, field: 'rtl_mirror_groups' })
+      onWarning?.({ type: 'missing-layer', layer: rawId, field: 'rtl_mirror_groups' })
       return
     }
 
     const existing = el.getAttribute('transform') || ''
     const boxCenter = el.getAttribute('data-bf-mirror-cx') || '0'
     el.setAttribute('transform', `translate(${boxCenter} 0) scale(-1 1) translate(-${boxCenter} 0) ${existing}`.trim())
-    onWarning?.({ type: 'rtl', layer: rawId, message: 'mirrored group for RTL row' })
   })
 }

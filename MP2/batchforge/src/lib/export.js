@@ -115,21 +115,54 @@ export async function downloadPdf(results, { onProgress, scale = 2 } = {}) {
   pdf.save('batch.pdf')
 }
 
+async function svgToPdfBlob(svgString, { scale = 2 } = {}) {
+  const { jsPDF } = await import('jspdf')
+  const { width, height } = getSvgDimensions(svgString)
+  const orientation = width >= height ? 'landscape' : 'portrait'
+  const pdf = new jsPDF({
+    orientation,
+    unit: 'px',
+    format: [width, height],
+    hotfixes: ['px_scaling'],
+  })
+  const png = await svgToPngBlob(svgString, { scale })
+  const dataUrl = await blobToDataUrl(png)
+  pdf.addImage(dataUrl, 'PNG', 0, 0, width, height)
+  return pdf.output('blob')
+}
+
+export async function downloadZipPdfs(results, { onProgress, scale = 2 } = {}) {
+  const zip = new JSZip()
+
+  for (let i = 0; i < results.length; i += 1) {
+    const pdfBlob = await svgToPdfBlob(results[i].content, { scale })
+    zip.file(`${svgBasename(results[i].name)}.pdf`, pdfBlob)
+    onProgress?.(i + 1, results.length)
+    if (i % 10 === 9) await new Promise((r) => setTimeout(r, 0))
+  }
+
+  const blob = await zip.generateAsync({ type: 'blob' })
+  triggerDownload(blob, 'batch.zip')
+}
+
 export async function exportResults(results, format, options = {}) {
   if (format === 'png') return downloadZipPngs(results, options)
-  if (format === 'pdf') return downloadPdf(results, options)
+  if (format === 'pdf') {
+    if (options.pdfMode === 'individual') return downloadZipPdfs(results, options)
+    return downloadPdf(results, options)
+  }
   return downloadZipSvgs(results, options.filename ?? 'batch.zip')
 }
 
-export function exportFormatLabel(format) {
-  if (format === 'png') return 'PNG (ZIP)'
-  if (format === 'pdf') return 'PDF'
-  return 'SVG (ZIP)'
+export function exportFormatLabel(format, pdfMode = 'combined') {
+  if (format === 'png') return 'PNG ZIP'
+  if (format === 'pdf') return pdfMode === 'individual' ? 'PDF ZIP' : 'PDF'
+  return 'SVG ZIP'
 }
 
-export function downloadButtonLabel(format, hasPreview) {
+export function downloadButtonLabel(format, hasPreview, pdfMode = 'combined') {
   if (!hasPreview) return 'Preview'
-  if (format === 'pdf') return 'Download PDF'
+  if (format === 'pdf') return pdfMode === 'individual' ? 'Download PDF ZIP' : 'Download PDF'
   if (format === 'png') return 'Download PNG ZIP'
   return 'Download ZIP'
 }

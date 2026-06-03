@@ -65,13 +65,13 @@ export async function generateBatch({
     const row = rows[i]
 
     const doc = new DOMParser().parseFromString(templateString, 'image/svg+xml')
-    const warn = (warning) => onWarning?.({ row: i + 1, ...warning })
+    const warn = onWarning ?? (() => {})
 
     // Apply reusable UI-configured rules before values are inserted.
     for (const [rawId, rule] of visibilityEntries) {
       const el = findEl(doc, rawId)
       if (!el) {
-        warn({ type: 'missing-field', layer: rawId, field: rawId })
+        warn({ type: 'missing-layer', layer: rawId })
         continue
       }
 
@@ -82,7 +82,6 @@ export async function generateBatch({
       }
 
       applyVisibility(el, result.visible)
-      if (!result.visible) warn({ type: 'hidden-layer', layer: rawId })
     }
 
     // CSV shortcut: a column named layer_name__visible can override a row.
@@ -101,7 +100,6 @@ export async function generateBatch({
       }
 
       applyVisibility(el, result.visible)
-      if (!result.visible) warn({ type: 'hidden-layer', layer: rawId })
     })
 
     // Mirroring is opt-in per row, never global.
@@ -117,12 +115,9 @@ export async function generateBatch({
       const hasColorMap = m.colorSource === 'csv' || m.colorSource === 'manual'
 
       if (m.source === 'csv') {
-        const localized = getLocalizedValue(row, m.column, (warning) => warn({ ...warning, layer: rawId }))
+        const localized = getLocalizedValue(row, m.column, (w) => warn({ ...w, layer: rawId }))
         value = localized.value
         locale = localized.locale
-        if (localized.missing) {
-          warn({ type: 'missing-field', layer: rawId, field: m.column })
-        }
       } else if (m.source === 'manual') {
         value = m.value
       }
@@ -132,10 +127,9 @@ export async function generateBatch({
         if (hasTextMap && value !== undefined && value !== null && String(value).trim() !== '') {
           if (isRtlRow(row, locale)) {
             applyRtlText(el)
-            warn({ type: 'rtl', layer: rawId, message: 'applied RTL text direction' })
           }
 
-          fitText(el, value, (warning) => warn({ ...warning, layer: rawId }))
+          fitText(el, value, (w) => warn({ ...w, layer: rawId }))
         }
 
         if (hasColorMap) {
@@ -143,12 +137,12 @@ export async function generateBatch({
             ? row[m.colorColumn]
             : m.colorValue
 
-          if (color === undefined || color === null || String(color).trim() === '') {
-            warn({ type: 'missing-field', layer: rawId, field: m.colorColumn ?? 'color' })
-          } else if (!isValidCssColor(color)) {
-            warn({ type: 'color', layer: rawId, value: color })
-          } else {
-            applyTextColor(el, String(color).trim())
+          if (color !== undefined && color !== null && String(color).trim() !== '') {
+            if (!isValidCssColor(color)) {
+              warn({ type: 'color', layer: rawId, value: color })
+            } else {
+              applyTextColor(el, String(color).trim())
+            }
           }
         }
 

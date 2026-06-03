@@ -9,6 +9,7 @@ export default function ResultsModal() {
   const totalRows = useStore((s) => s.csvRows.length)
   const running = useStore((s) => s.generation.running)
   const exportFormat = useStore((s) => s.exportFormat)
+  const exportPdfMode = useStore((s) => s.exportPdfMode)
   const downloadAll = useStore((s) => s.downloadAll)
 
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -78,7 +79,7 @@ export default function ResultsModal() {
               onClick={downloadAll}
               disabled={running}
             >
-              {running ? 'Preparing export…' : downloadButtonLabel(exportFormat, true)}
+              {running ? 'Preparing export…' : downloadButtonLabel(exportFormat, true, exportPdfMode)}
             </button>
             <button
               className="bf-btn-ghost w-9 h-9 p-0 rounded-full flex items-center justify-center text-sm"
