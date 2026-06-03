@@ -48,20 +48,34 @@ function estimateItemsWidth(items) {
   return width
 }
 
-function PillLink({ color = 'rgba(26,43,74,0.22)' }) {
+function PillLink({ color = 'rgba(26,43,74,0.22)', onSelect }) {
   return (
-    <div className="flex shrink-0 items-center" style={{ width: 14 }} aria-hidden="true">
+    <button
+      type="button"
+      aria-label="Select connected layer"
+      onClick={(e) => {
+        e.stopPropagation()
+        onSelect?.()
+      }}
+      className="flex shrink-0 cursor-pointer items-center"
+      style={{ width: 14 }}
+    >
       <span style={{ width: 3, height: 3, borderRadius: '50%', background: color }} />
       <span style={{ flex: 1, height: 1.5, background: color, margin: '0 2px' }} />
       <span style={{ width: 3, height: 3, borderRadius: '50%', background: color }} />
-    </div>
+    </button>
   )
 }
 
-function JoinOperator({ label }) {
+function JoinOperator({ label, onSelect }) {
   return (
-    <span
-      className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onSelect?.()
+      }}
+      className="shrink-0 cursor-pointer rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide transition-transform hover:scale-[1.04]"
       style={{
         background: 'rgba(250,245,255,0.98)',
         border: '1px solid rgba(168,85,247,0.42)',
@@ -70,14 +84,19 @@ function JoinOperator({ label }) {
       }}
     >
       {label}
-    </span>
+    </button>
   )
 }
 
-function MappingSegment({ label, tone, leadingGradient = null }) {
+function MappingSegment({ label, tone, leadingGradient = null, onSelect }) {
   return (
-    <div
-      className="flex h-8 max-w-[168px] shrink-0 items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-[11px] font-semibold"
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onSelect?.()
+      }}
+      className="flex h-8 max-w-[168px] shrink-0 cursor-pointer items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-[11px] font-semibold transition-transform hover:scale-[1.03]"
       style={{
         background: tone.bg,
         border: tone.border,
@@ -99,11 +118,11 @@ function MappingSegment({ label, tone, leadingGradient = null }) {
         />
       )}
       <span className="truncate">{label}</span>
-    </div>
+    </button>
   )
 }
 
-function LinkedMappingGroup({ rect, lane, items, connectorTone }) {
+function LinkedMappingGroup({ rect, lane, items, connectorTone, onSelect }) {
   const labelHeight = 32
   const groupWidth = estimateItemsWidth(items)
   const desiredLeft = rect.x + rect.w + 28
@@ -140,19 +159,19 @@ function LinkedMappingGroup({ rect, lane, items, connectorTone }) {
         <circle cx={fromX} cy={fromY} r="2.5" fill={connectorTone.dot} />
       </svg>
       <div
-        className="absolute flex items-center"
+        className="pointer-events-auto absolute z-10 flex items-center"
         style={{ left: labelLeft, top: labelTop, height: labelHeight }}
       >
         {items.map((item, index) => {
           if (item.join) {
             if (item.join === 'link') {
-              return <PillLink key={`link-${index}`} color={connectorTone.line} />
+              return <PillLink key={`link-${index}`} color={connectorTone.line} onSelect={onSelect} />
             }
             return (
               <span key={`join-${index}`} className="flex items-center">
-                <PillLink color={connectorTone.line} />
-                <JoinOperator label={item.join} />
-                <PillLink color={connectorTone.line} />
+                <PillLink color={connectorTone.line} onSelect={onSelect} />
+                <JoinOperator label={item.join} onSelect={onSelect} />
+                <PillLink color={connectorTone.line} onSelect={onSelect} />
               </span>
             )
           }
@@ -163,6 +182,7 @@ function LinkedMappingGroup({ rect, lane, items, connectorTone }) {
               label={item.label}
               tone={item.tone}
               leadingGradient={item.leadingGradient}
+              onSelect={onSelect}
             />
           )
         })}
@@ -325,6 +345,7 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
             const valueItems = buildValueMappingItems(mappedColumn, colorLabel, csvRows, m)
             const visibilityItems = hasRule ? buildVisibilityItems(rule) : []
             const hasValueMappings = valueItems.length > 0
+            const selectLayer = () => onSelect(r.nodeId, r.rawId)
 
             return (
               <div key={`mapped-${r.nodeId}`} className="absolute inset-0 pointer-events-none">
@@ -358,6 +379,7 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
                       lane={0}
                       items={valueItems}
                       connectorTone={MAPPING_TONE}
+                      onSelect={selectLayer}
                     />
                   </>
                 )}
@@ -383,6 +405,7 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
                       lane={hasValueMappings ? 1 : 0}
                       items={visibilityItems}
                       connectorTone={VISIBILITY_TONE}
+                      onSelect={selectLayer}
                     />
                   </>
                 )}
@@ -425,7 +448,7 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
               }}
               onMouseEnter={() => setHoveredId(r.nodeId)}
               onMouseLeave={() => setHoveredId(null)}
-              onClick={() => onSelect(r.nodeId)}
+              onClick={() => onSelect(r.nodeId, r.rawId)}
             />
           )
         })}
@@ -497,7 +520,9 @@ export default function Canvas() {
     ? generation.previewSvg
     : docString
 
-  const handleSelect = useCallback((nodeId) => selectNode(nodeId), [selectNode])
+  const handleSelect = useCallback((nodeId, rawId = null) => {
+    selectNode(nodeId, rawId)
+  }, [selectNode])
 
   if (!displaySvg) {
     return (
