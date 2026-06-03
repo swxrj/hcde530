@@ -5,6 +5,8 @@ import StatusBar from './components/StatusBar'
 import RightPanel from './components/RightPanel'
 import Toasts from './components/Toasts'
 import ResultsModal from './components/ResultsModal'
+import MappingReviewModal from './components/MappingReviewModal'
+import CsvPreviewModal from './components/CsvPreviewModal'
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
       </main>
       <RightPanel />
       <Toasts />
+      <MappingReviewModal />
+      <CsvPreviewModal />
       <ResultsModal />
     </div>
   )

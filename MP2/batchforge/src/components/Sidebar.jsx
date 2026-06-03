@@ -12,7 +12,7 @@ const FILTERS = [
 ]
 
 const CARD_ICONS = {
-  Template: (
+  Design: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="18" height="18" rx="2"/>
       <path d="M3 9h18M9 21V9"/>
@@ -40,7 +40,7 @@ function UploadCard({ accept, onChange, uploaded, label, hint }) {
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.1, ease: 'easeOut' }}
       onClick={() => ref.current?.click()}
-      className={`relative rounded-2xl cursor-pointer px-4 py-5 flex gap-3.5 items-center select-none ${
+      className={`relative z-10 rounded-2xl cursor-pointer px-4 py-5 flex gap-3.5 items-center select-none ${
         uploaded ? 'bf-upload-loaded' : 'bf-upload-empty'
       }`}
     >
@@ -113,6 +113,48 @@ function UploadCard({ accept, onChange, uploaded, label, hint }) {
   )
 }
 
+function DataPreviewButton() {
+  const openCsvPreview = useStore((s) => s.openCsvPreview)
+  const csvHeaders = useStore((s) => s.csvHeaders)
+  const csvRows = useStore((s) => s.csvRows)
+
+  if (csvRows.length === 0) return null
+
+  return (
+    <motion.button
+      type="button"
+      whileHover={{
+        y: 2,
+        backgroundColor: 'rgba(255,255,255,0.68)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.58) inset, 0 7px 20px rgba(14,165,233,0.14)',
+      }}
+      whileTap={{ scale: 0.98 }}
+      className="-mt-4 h-16 rounded-b-2xl rounded-t-none px-4 pb-3.5 pt-7 text-xs font-semibold grid grid-cols-[40px_1fr_auto] items-center gap-3.5 cursor-pointer"
+      style={{
+        background: 'rgba(255,255,255,0.5)',
+        border: '1px solid rgba(14,165,233,0.16)',
+        borderTop: 'none',
+        color: 'var(--ink-60)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.48) inset, 0 4px 14px rgba(14,165,233,0.08)',
+        transition: 'color 0.12s ease',
+      }}
+      onClick={openCsvPreview}
+      title="Open CSV table preview"
+    >
+      <span className="flex h-7 w-10 items-center justify-center" style={{ color: 'rgba(14,165,233,0.72)' }}>
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" />
+          <circle cx="12" cy="12" r="2.5" />
+        </svg>
+      </span>
+      <span className="truncate text-left">View CSV data</span>
+      <span className="font-mono text-[10px]" style={{ color: 'var(--ink-35)' }}>
+        {csvRows.length}x{csvHeaders.length}
+      </span>
+    </motion.button>
+  )
+}
+
 export default function Sidebar() {
   const loadSvg = useStore((s) => s.loadSvg)
   const loadCsv = useStore((s) => s.loadCsv)
@@ -182,26 +224,29 @@ export default function Sidebar() {
           accept=".svg,image/svg+xml"
           onChange={handleSvgUpload}
           uploaded={!!svgText}
-          label="Template"
-          hint={svgText ? 'Click to replace SVG' : 'SVG file with named layers'}
+          label="Design"
+          hint={svgText ? 'Click to replace SVG' : 'SVG design with named layers'}
         />
-        <UploadCard
-          accept=".csv,text/csv"
-          onChange={handleCsvUpload}
-          uploaded={csvRows.length > 0}
-          label="Data"
-          hint={
-            csvRows.length > 0
-              ? `${csvRows.length.toLocaleString()} rows → ${csvRows.length.toLocaleString()} SVGs`
-              : 'CSV with one row per variant'
-          }
-        />
+        <div className="flex flex-col">
+          <UploadCard
+            accept=".csv,text/csv"
+            onChange={handleCsvUpload}
+            uploaded={csvRows.length > 0}
+            label="Data"
+            hint={
+              csvRows.length > 0
+                ? `${csvRows.length.toLocaleString()} rows → ${csvRows.length.toLocaleString()} SVGs`
+                : 'CSV with one row per variant'
+            }
+          />
+          <DataPreviewButton />
+        </div>
       </div>
 
       {/* Layer section */}
       {!svgText ? (
         <div className="flex-1 overflow-y-auto p-5 pt-6">
-          <EmptyState message="Upload an SVG template to get started." />
+          <EmptyState message="Upload an SVG design to get started." />
         </div>
       ) : layerTree.length === 0 ? (
         <div className="flex-1 overflow-y-auto p-5 pt-6">

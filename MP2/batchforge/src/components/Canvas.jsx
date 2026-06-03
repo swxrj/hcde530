@@ -340,7 +340,7 @@ export default function Canvas() {
   if (!displaySvg) {
     return (
       <div className="flex-1 grid place-items-center">
-        <EmptyState message="Upload an SVG template to preview it here." />
+        <EmptyState message="Upload an SVG design to preview it here." />
       </div>
     )
   }

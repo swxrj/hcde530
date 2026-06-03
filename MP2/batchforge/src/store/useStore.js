@@ -22,9 +22,13 @@ export const useStore = create((set, get) => ({
   csvHeaders: [],
   csvRows: [],
   filenameFormat: '',
+  csvPreviewOpen: false,
+  selectedCsvColumn: null,
 
   // Mapping: { [rawId]: { source: 'csv'|'manual'|'none', column?, value? } }
   mapping: {},
+  mappingReviewIds: [],
+  mappingReviewOpen: false,
   visibilityRules: {},
 
   // Generation state
@@ -48,12 +52,17 @@ export const useStore = create((set, get) => ({
     const { docString, layers, layerTree } = parseSvg(text)
     const { csvHeaders } = get()
     const mapping = autoMap(layers, csvHeaders)
+    const mappingReviewIds = Object.entries(mapping)
+      .filter(([, entry]) => entry.source === 'csv')
+      .map(([rawId]) => rawId)
     set({
       svgText: text,
       docString,
       layers,
       layerTree,
       mapping,
+      mappingReviewIds,
+      mappingReviewOpen: csvHeaders.length > 0 && mappingReviewIds.length > 0,
       visibilityRules: {},
       selectedNodeId: null,
       selectedRawId: null,
@@ -66,10 +75,16 @@ export const useStore = create((set, get) => ({
     const { headers, rows } = await parseCsv(file)
     const { layers } = get()
     const mapping = autoMap(layers, headers)
+    const mappingReviewIds = Object.entries(mapping)
+      .filter(([, entry]) => entry.source === 'csv')
+      .map(([rawId]) => rawId)
     set({
       csvHeaders: headers,
       csvRows: rows,
       mapping,
+      mappingReviewIds,
+      mappingReviewOpen: layers.length > 0 && mappingReviewIds.length > 0,
+      selectedCsvColumn: headers[0] ?? null,
       filenameFormat: '',
     })
   },
@@ -77,6 +92,16 @@ export const useStore = create((set, get) => ({
   setMapping: (rawId, entry) => {
     set((s) => ({ mapping: { ...s.mapping, [rawId]: entry } }))
   },
+
+  closeMappingReview: () => set({ mappingReviewOpen: false }),
+
+  clearMappingReviewItem: (rawId) => {
+    set((s) => ({ mappingReviewIds: s.mappingReviewIds.filter((id) => id !== rawId) }))
+  },
+
+  openCsvPreview: () => set({ csvPreviewOpen: true }),
+  closeCsvPreview: () => set({ csvPreviewOpen: false }),
+  selectCsvColumn: (column) => set({ selectedCsvColumn: column }),
 
   setManualOverride: (rawId, value) => {
     set((s) => ({
