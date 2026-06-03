@@ -25,12 +25,181 @@ function ruleLabel(rule) {
   return 'visibility rule'
 }
 
-function conditionLabel(condition, index, match) {
+function conditionLabel(condition) {
   if (!condition?.column) return 'visibility rule'
   const op = CONDITION_OPERATOR_LABELS[condition.operator] ?? condition.operator
   const value = ['is_empty', 'is_not_empty'].includes(condition.operator) ? '' : ` ${condition.value ?? ''}`
-  const prefix = index > 0 ? `${match === 'any' ? 'OR' : 'AND'} ` : ''
-  return `${prefix}${condition.column} ${op}${value}`.trim()
+  return `${condition.column} ${op}${value}`.trim()
+}
+
+function estimateSegmentWidth(label, hasGradient = false) {
+  return Math.min(168, Math.max(76, label.length * 6.2 + (hasGradient ? 22 : 0) + 24))
+}
+
+function estimateItemsWidth(items) {
+  let width = 0
+  items.forEach((item) => {
+    if (item.join) {
+      width += item.join === 'link' ? 14 : 56
+    } else {
+      width += estimateSegmentWidth(item.label, Boolean(item.leadingGradient))
+    }
+  })
+  return width
+}
+
+function PillLink({ color = 'rgba(26,43,74,0.22)' }) {
+  return (
+    <div className="flex shrink-0 items-center" style={{ width: 14 }} aria-hidden="true">
+      <span style={{ width: 3, height: 3, borderRadius: '50%', background: color }} />
+      <span style={{ flex: 1, height: 1.5, background: color, margin: '0 2px' }} />
+      <span style={{ width: 3, height: 3, borderRadius: '50%', background: color }} />
+    </div>
+  )
+}
+
+function JoinOperator({ label }) {
+  return (
+    <span
+      className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+      style={{
+        background: 'rgba(250,245,255,0.98)',
+        border: '1px solid rgba(168,85,247,0.42)',
+        color: 'rgb(126,34,206)',
+        boxShadow: '0 4px 10px rgba(126,34,206,0.1)',
+      }}
+    >
+      {label}
+    </span>
+  )
+}
+
+function MappingSegment({ label, tone, leadingGradient = null }) {
+  return (
+    <div
+      className="flex h-8 max-w-[168px] shrink-0 items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-[11px] font-semibold"
+      style={{
+        background: tone.bg,
+        border: tone.border,
+        color: tone.text,
+        boxShadow: tone.shadow,
+      }}
+      title={label}
+    >
+      {leadingGradient && (
+        <span
+          className="inline-block shrink-0 rounded-full"
+          style={{
+            width: 14,
+            height: 14,
+            background: leadingGradient,
+            border: '1px solid rgba(255,255,255,0.75)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.14)',
+          }}
+        />
+      )}
+      <span className="truncate">{label}</span>
+    </div>
+  )
+}
+
+function LinkedMappingGroup({ rect, lane, items, connectorTone }) {
+  const labelHeight = 32
+  const groupWidth = estimateItemsWidth(items)
+  const desiredLeft = rect.x + rect.w + 28
+  const canPlaceRight = desiredLeft + groupWidth <= rect.stageRight - 16
+  const labelLeft = canPlaceRight
+    ? desiredLeft
+    : Math.max(rect.stageLeft + 16, rect.x - groupWidth - 28)
+  const preferredTop = lane === 0 ? rect.y - 18 : rect.y + rect.h + 10 + (lane - 1) * 44
+  const labelTop = Math.max(rect.stageTop + 16, Math.min(preferredTop, rect.stageBottom - labelHeight - 16))
+  const fromX = canPlaceRight ? rect.x + rect.w + 6 : rect.x - 6
+  const fromY = lane === 0
+    ? rect.y + Math.min(28, Math.max(8, rect.h * 0.38))
+    : rect.y + Math.max(8, Math.min(rect.h - 8, rect.h * 0.72))
+  const toX = canPlaceRight ? labelLeft : labelLeft + groupWidth
+  const toY = labelTop + labelHeight / 2
+  const bend = Math.max(18, Math.min(48, Math.abs(toX - fromX) * 0.45))
+  const c1X = canPlaceRight ? fromX + bend : fromX - bend
+  const c2X = canPlaceRight ? toX - bend : toX + bend
+  const path = `M ${fromX} ${fromY} C ${c1X} ${fromY}, ${c2X} ${toY}, ${toX} ${toY}`
+
+  return (
+    <>
+      <svg
+        className="absolute inset-0 pointer-events-none overflow-visible"
+        style={{ width: '100%', height: '100%' }}
+      >
+        <path
+          d={path}
+          fill="none"
+          stroke={connectorTone.line}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <circle cx={fromX} cy={fromY} r="2.5" fill={connectorTone.dot} />
+      </svg>
+      <div
+        className="absolute flex items-center"
+        style={{ left: labelLeft, top: labelTop, height: labelHeight }}
+      >
+        {items.map((item, index) => {
+          if (item.join) {
+            if (item.join === 'link') {
+              return <PillLink key={`link-${index}`} color={connectorTone.line} />
+            }
+            return (
+              <span key={`join-${index}`} className="flex items-center">
+                <PillLink color={connectorTone.line} />
+                <JoinOperator label={item.join} />
+                <PillLink color={connectorTone.line} />
+              </span>
+            )
+          }
+
+          return (
+            <MappingSegment
+              key={`segment-${index}`}
+              label={item.label}
+              tone={item.tone}
+              leadingGradient={item.leadingGradient}
+            />
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
+function buildValueMappingItems(mappedColumn, colorLabel, csvRows, mappingEntry) {
+  const items = []
+  if (mappedColumn) items.push({ label: mappedColumn, tone: MAPPING_TONE })
+  if (colorLabel) {
+    if (items.length) items.push({ join: 'link' })
+    items.push({
+      label: colorLabel,
+      tone: COLOR_MAPPING_TONE,
+      leadingGradient: colorMappingGradient(csvRows, mappingEntry),
+    })
+  }
+  return items
+}
+
+function buildVisibilityItems(rule) {
+  if (rule.mode === 'hidden') {
+    return [{ label: ruleLabel(rule), tone: VISIBILITY_TONE }]
+  }
+
+  const conditions = rule.conditions?.length ? rule.conditions : [null]
+  const joinLabel = rule.match === 'any' ? 'OR' : 'AND'
+  const items = []
+
+  conditions.forEach((condition, index) => {
+    if (index > 0) items.push({ join: joinLabel })
+    items.push({ label: conditionLabel(condition), tone: VISIBILITY_TONE })
+  })
+
+  return items
 }
 
 const COLOR_MAPPING_TONE = {
@@ -70,73 +239,6 @@ function colorMappingGradient(csvRows, mappingEntry) {
     return sampleColorGradient(csvRows, mappingEntry.colorColumn)
   }
   return 'linear-gradient(135deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
-}
-
-function ConnectorBadge({ rect, label, tone, lane = 0, leadingGradient = null }) {
-  const labelWidth = 176
-  const labelHeight = 32
-  const desiredLeft = rect.x + rect.w + 28
-  const canPlaceRight = desiredLeft + labelWidth <= rect.stageRight - 16
-  const labelLeft = canPlaceRight
-    ? desiredLeft
-    : Math.max(rect.stageLeft + 16, rect.x - labelWidth - 28)
-  const preferredTop = lane === 0 ? rect.y - 18 : rect.y + rect.h + 10 + (lane - 1) * 38
-  const labelTop = Math.max(rect.stageTop + 16, Math.min(preferredTop, rect.stageBottom - labelHeight - 16))
-  const fromX = canPlaceRight ? rect.x + rect.w + 6 : rect.x - 6
-  const fromY = lane === 0
-    ? rect.y + Math.min(28, Math.max(8, rect.h * 0.38))
-    : rect.y + Math.max(8, Math.min(rect.h - 8, rect.h * 0.72))
-  const toX = canPlaceRight ? labelLeft : labelLeft + labelWidth
-  const toY = labelTop + labelHeight / 2
-  const bend = Math.max(18, Math.min(48, Math.abs(toX - fromX) * 0.45))
-  const c1X = canPlaceRight ? fromX + bend : fromX - bend
-  const c2X = canPlaceRight ? toX - bend : toX + bend
-  const path = `M ${fromX} ${fromY} C ${c1X} ${fromY}, ${c2X} ${toY}, ${toX} ${toY}`
-
-  return (
-    <>
-      <svg
-        className="absolute inset-0 pointer-events-none overflow-visible"
-        style={{ width: '100%', height: '100%' }}
-      >
-        <path
-          d={path}
-          fill="none"
-          stroke={tone.line}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-        <circle cx={fromX} cy={fromY} r="2.5" fill={tone.dot} />
-      </svg>
-      <div
-        className="absolute pointer-events-none max-w-44 truncate rounded-full px-2.5 py-1 text-[11px] font-semibold flex items-center gap-1.5"
-        style={{
-          left: labelLeft,
-          top: labelTop,
-          width: labelWidth,
-          background: tone.bg,
-          border: tone.border,
-          color: tone.text,
-          boxShadow: tone.shadow,
-        }}
-        title={label}
-      >
-        {leadingGradient && (
-          <span
-            className="inline-block shrink-0 rounded-full"
-            style={{
-              width: 14,
-              height: 14,
-              background: leadingGradient,
-              border: '1px solid rgba(255,255,255,0.75)',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.14)',
-            }}
-          />
-        )}
-        <span className="truncate">{label}</span>
-      </div>
-    </>
-  )
 }
 
 const MAPPING_TONE = {
@@ -220,59 +322,42 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
             const hasRule = rule && rule.mode !== 'always'
             if (!mappedColumn && !hasColorMap && !hasRule) return null
 
-            const colorLane = mappedColumn ? 1 : 0
-            const visibilityBaseLane = colorLane + (hasColorMap ? 1 : 0)
+            const valueItems = buildValueMappingItems(mappedColumn, colorLabel, csvRows, m)
+            const visibilityItems = hasRule ? buildVisibilityItems(rule) : []
+            const hasValueMappings = valueItems.length > 0
 
             return (
               <div key={`mapped-${r.nodeId}`} className="absolute inset-0 pointer-events-none">
-                {mappedColumn && (
+                {hasValueMappings && (
                   <>
                     <motion.div
                       className="absolute pointer-events-none"
                       initial={false}
                       animate={{ opacity: 1 }}
                       style={{
-                        left: r.x - 6,
-                        top: r.y - 6,
-                        width: r.w + 12,
-                        height: r.h + 12,
-                        border: '2px dotted rgba(22,163,74,0.95)',
-                        borderRadius: 9,
-                        boxShadow: '0 0 0 3px rgba(34,197,94,0.12)',
+                        left: r.x - (hasColorMap && mappedColumn ? 8 : 6),
+                        top: r.y - (hasColorMap && mappedColumn ? 8 : 6),
+                        width: r.w + (hasColorMap && mappedColumn ? 16 : 12),
+                        height: r.h + (hasColorMap && mappedColumn ? 16 : 12),
+                        border: hasColorMap && mappedColumn
+                          ? '2px dotted rgba(22,163,74,0.55)'
+                          : mappedColumn
+                            ? '2px dotted rgba(22,163,74,0.95)'
+                            : '2px dotted rgba(234,88,12,0.92)',
+                        borderRadius: hasColorMap && mappedColumn ? 10 : 9,
+                        boxShadow: hasColorMap && mappedColumn
+                          ? '0 0 0 3px rgba(34,197,94,0.08), inset 0 0 0 2px rgba(249,115,22,0.14)'
+                          : mappedColumn
+                            ? '0 0 0 3px rgba(34,197,94,0.12)'
+                            : '0 0 0 3px rgba(249,115,22,0.1)',
                         boxSizing: 'border-box',
                       }}
                     />
-                    <ConnectorBadge
+                    <LinkedMappingGroup
                       rect={r}
-                      label={mappedColumn}
-                      tone={MAPPING_TONE}
                       lane={0}
-                    />
-                  </>
-                )}
-                {hasColorMap && colorLabel && (
-                  <>
-                    <motion.div
-                      className="absolute pointer-events-none"
-                      initial={false}
-                      animate={{ opacity: 1 }}
-                      style={{
-                        left: r.x - 8,
-                        top: r.y - 8,
-                        width: r.w + 16,
-                        height: r.h + 16,
-                        border: '2px dotted rgba(234,88,12,0.92)',
-                        borderRadius: 10,
-                        boxShadow: '0 0 0 3px rgba(249,115,22,0.1)',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                    <ConnectorBadge
-                      rect={r}
-                      label={colorLabel}
-                      tone={COLOR_MAPPING_TONE}
-                      lane={colorLane}
-                      leadingGradient={colorMappingGradient(csvRows, m)}
+                      items={valueItems}
+                      connectorTone={MAPPING_TONE}
                     />
                   </>
                 )}
@@ -293,24 +378,12 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
                         boxSizing: 'border-box',
                       }}
                     />
-                    {rule.mode === 'hidden' ? (
-                      <ConnectorBadge
-                        rect={r}
-                        label={ruleLabel(rule)}
-                        tone={VISIBILITY_TONE}
-                        lane={visibilityBaseLane}
-                      />
-                    ) : (
-                      (rule.conditions?.length ? rule.conditions : [null]).map((condition, index) => (
-                        <ConnectorBadge
-                          key={`${r.nodeId}-condition-${index}`}
-                          rect={r}
-                          label={conditionLabel(condition, index, rule.match)}
-                          tone={VISIBILITY_TONE}
-                          lane={visibilityBaseLane + index}
-                        />
-                      ))
-                    )}
+                    <LinkedMappingGroup
+                      rect={r}
+                      lane={hasValueMappings ? 1 : 0}
+                      items={visibilityItems}
+                      connectorTone={VISIBILITY_TONE}
+                    />
                   </>
                 )}
               </div>

@@ -211,6 +211,8 @@ function VisibilitySection({ rawId }) {
       clearVisibilityRule(rawId)
     } else if (next.mode === 'hidden') {
       setVisibilityRule(rawId, next)
+    } else if (next.mode === 'conditional') {
+      setVisibilityRule(rawId, { ...next, conditions })
     }
   }
 
