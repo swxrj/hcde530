@@ -33,7 +33,46 @@ function conditionLabel(condition, index, match) {
   return `${prefix}${condition.column} ${op}${value}`.trim()
 }
 
-function ConnectorBadge({ rect, label, tone, lane = 0 }) {
+const COLOR_MAPPING_TONE = {
+  bg: 'rgba(255,247,237,0.97)',
+  border: '1px solid rgba(249,115,22,0.38)',
+  text: 'rgb(194,65,12)',
+  line: 'rgba(234,88,12,0.68)',
+  dot: 'rgb(234,88,12)',
+  shadow: '0 8px 20px rgba(234,88,12,0.12)',
+}
+
+function sampleColorGradient(csvRows, column, max = 5) {
+  const colors = []
+  const seen = new Set()
+  for (const row of csvRows) {
+    const value = String(row[column] ?? '').trim()
+    if (!value || seen.has(value.toLowerCase())) continue
+    if (!/^#|^rgb|^hsl/i.test(value)) continue
+    seen.add(value.toLowerCase())
+    colors.push(value)
+    if (colors.length >= max) break
+  }
+
+  if (colors.length === 0) {
+    return 'linear-gradient(135deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
+  }
+  if (colors.length === 1) return colors[0]
+  const stops = colors.map((color, index) => `${color} ${(index / (colors.length - 1)) * 100}%`).join(', ')
+  return `linear-gradient(135deg, ${stops})`
+}
+
+function colorMappingGradient(csvRows, mappingEntry) {
+  if (mappingEntry.colorSource === 'manual' && mappingEntry.colorValue) {
+    return mappingEntry.colorValue
+  }
+  if (mappingEntry.colorSource === 'csv' && mappingEntry.colorColumn) {
+    return sampleColorGradient(csvRows, mappingEntry.colorColumn)
+  }
+  return 'linear-gradient(135deg, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
+}
+
+function ConnectorBadge({ rect, label, tone, lane = 0, leadingGradient = null }) {
   const labelWidth = 176
   const labelHeight = 32
   const desiredLeft = rect.x + rect.w + 28
@@ -70,7 +109,7 @@ function ConnectorBadge({ rect, label, tone, lane = 0 }) {
         <circle cx={fromX} cy={fromY} r="2.5" fill={tone.dot} />
       </svg>
       <div
-        className="absolute pointer-events-none max-w-44 truncate rounded-full px-2.5 py-1 text-[11px] font-semibold"
+        className="absolute pointer-events-none max-w-44 truncate rounded-full px-2.5 py-1 text-[11px] font-semibold flex items-center gap-1.5"
         style={{
           left: labelLeft,
           top: labelTop,
@@ -82,7 +121,19 @@ function ConnectorBadge({ rect, label, tone, lane = 0 }) {
         }}
         title={label}
       >
-        {label}
+        {leadingGradient && (
+          <span
+            className="inline-block shrink-0 rounded-full"
+            style={{
+              width: 14,
+              height: 14,
+              background: leadingGradient,
+              border: '1px solid rgba(255,255,255,0.75)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.14)',
+            }}
+          />
+        )}
+        <span className="truncate">{label}</span>
       </div>
     </>
   )
@@ -106,7 +157,7 @@ const VISIBILITY_TONE = {
   shadow: '0 8px 20px rgba(126,34,206,0.12)',
 }
 
-function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibilityRules, showMappingOverlay, onSelect }) {
+function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibilityRules, showMappingOverlay, csvRows, onSelect }) {
   const [rects, setRects] = useState([])
   const [hoveredId, setHoveredId] = useState(null)
 
@@ -157,9 +208,20 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
           {rects.map((r) => {
             const m = r.rawId ? mapping[r.rawId] : null
             const mappedColumn = m?.source === 'csv' ? m.column : null
+            const mappedColorColumn = m?.colorSource === 'csv' ? m.colorColumn : null
+            const mappedColorManual = m?.colorSource === 'manual' ? m.colorValue : null
+            const hasColorMap = Boolean(mappedColorColumn || mappedColorManual)
+            const colorLabel = mappedColorColumn
+              ? mappedColorColumn
+              : mappedColorManual
+                ? `color: ${mappedColorManual}`
+                : null
             const rule = r.rawId ? visibilityRules[r.rawId] : null
             const hasRule = rule && rule.mode !== 'always'
-            if (!mappedColumn && !hasRule) return null
+            if (!mappedColumn && !hasColorMap && !hasRule) return null
+
+            const colorLane = mappedColumn ? 1 : 0
+            const visibilityBaseLane = colorLane + (hasColorMap ? 1 : 0)
 
             return (
               <div key={`mapped-${r.nodeId}`} className="absolute inset-0 pointer-events-none">
@@ -188,6 +250,32 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
                     />
                   </>
                 )}
+                {hasColorMap && colorLabel && (
+                  <>
+                    <motion.div
+                      className="absolute pointer-events-none"
+                      initial={false}
+                      animate={{ opacity: 1 }}
+                      style={{
+                        left: r.x - 8,
+                        top: r.y - 8,
+                        width: r.w + 16,
+                        height: r.h + 16,
+                        border: '2px dotted rgba(234,88,12,0.92)',
+                        borderRadius: 10,
+                        boxShadow: '0 0 0 3px rgba(249,115,22,0.1)',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    <ConnectorBadge
+                      rect={r}
+                      label={colorLabel}
+                      tone={COLOR_MAPPING_TONE}
+                      lane={colorLane}
+                      leadingGradient={colorMappingGradient(csvRows, m)}
+                    />
+                  </>
+                )}
                 {hasRule && (
                   <>
                     <motion.div
@@ -210,7 +298,7 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
                         rect={r}
                         label={ruleLabel(rule)}
                         tone={VISIBILITY_TONE}
-                        lane={mappedColumn ? 1 : 0}
+                        lane={visibilityBaseLane}
                       />
                     ) : (
                       (rule.conditions?.length ? rule.conditions : [null]).map((condition, index) => (
@@ -219,7 +307,7 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
                           rect={r}
                           label={conditionLabel(condition, index, rule.match)}
                           tone={VISIBILITY_TONE}
-                          lane={(mappedColumn ? 1 : 0) + index}
+                          lane={visibilityBaseLane + index}
                         />
                       ))
                     )}
@@ -324,6 +412,7 @@ export default function Canvas() {
   const generation = useStore((s) => s.generation)
   const mapping = useStore((s) => s.mapping)
   const visibilityRules = useStore((s) => s.visibilityRules)
+  const csvRows = useStore((s) => s.csvRows)
   const showMappingOverlay = useStore((s) => s.showMappingOverlay)
   const toggleMappingOverlay = useStore((s) => s.toggleMappingOverlay)
 
@@ -347,7 +436,7 @@ export default function Canvas() {
 
   return (
     <div ref={stageRef} className="relative flex-1 flex items-center justify-center p-12 overflow-hidden min-h-0">
-      {!generation.running && Object.values(mapping).some((m) => m.source === 'csv') && (
+      {!generation.running && Object.values(mapping).some((m) => m.source === 'csv' || m.colorSource === 'csv') && (
         <MappingToggle active={showMappingOverlay} onClick={toggleMappingOverlay} />
       )}
 
@@ -366,6 +455,7 @@ export default function Canvas() {
             selectedNodeId={selectedNodeId}
             mapping={mapping}
             visibilityRules={visibilityRules}
+            csvRows={csvRows}
             showMappingOverlay={showMappingOverlay}
             onSelect={handleSelect}
           />

@@ -13,6 +13,16 @@ import {
 
 let cancelFlag = false
 
+function hasSuggestedMappings(mapping) {
+  return Object.values(mapping).some((entry) => entry.source === 'csv' || entry.colorSource === 'csv')
+}
+
+function collectMappingReviewIds(mapping) {
+  return Object.entries(mapping)
+    .filter(([, entry]) => entry.source === 'csv' || entry.colorSource === 'csv')
+    .map(([rawId]) => rawId)
+}
+
 export const useStore = create((set, get) => ({
   // SVG state
   svgText: null,
@@ -64,9 +74,7 @@ export const useStore = create((set, get) => ({
     const { docString, layers, layerTree } = parseSvg(text)
     const { csvHeaders } = get()
     const mapping = autoMap(layers, csvHeaders)
-    const mappingReviewIds = Object.entries(mapping)
-      .filter(([, entry]) => entry.source === 'csv')
-      .map(([rawId]) => rawId)
+    const mappingReviewIds = collectMappingReviewIds(mapping)
     set({
       svgText: text,
       docString,
@@ -74,7 +82,7 @@ export const useStore = create((set, get) => ({
       layerTree,
       mapping,
       mappingReviewIds,
-      mappingReviewOpen: csvHeaders.length > 0 && mappingReviewIds.length > 0,
+      mappingReviewOpen: csvHeaders.length > 0 && hasSuggestedMappings(mapping),
       visibilityRules: {},
       textAlignOverrides: {},
       selectedNodeId: null,
@@ -88,15 +96,13 @@ export const useStore = create((set, get) => ({
     const { headers, rows } = await parseCsv(file)
     const { layers } = get()
     const mapping = autoMap(layers, headers)
-    const mappingReviewIds = Object.entries(mapping)
-      .filter(([, entry]) => entry.source === 'csv')
-      .map(([rawId]) => rawId)
+    const mappingReviewIds = collectMappingReviewIds(mapping)
     set({
       csvHeaders: headers,
       csvRows: rows,
       mapping,
       mappingReviewIds,
-      mappingReviewOpen: layers.length > 0 && mappingReviewIds.length > 0,
+      mappingReviewOpen: layers.length > 0 && hasSuggestedMappings(mapping),
       selectedCsvColumn: headers[0] ?? null,
       filenameFormat: '',
     })
