@@ -2,6 +2,12 @@ import { create } from 'zustand'
 import { parseSvg } from '../lib/svgParser'
 import { parseCsv, autoMap } from '../lib/csvMapper'
 import { downloadZip, generateBatch } from '../lib/generator'
+import {
+  anchorXForAlignment,
+  getSvgFrame,
+  patchTextAlignment,
+  restoreTextAlignment,
+} from '../lib/textStyle'
 
 let cancelFlag = false
 
@@ -30,6 +36,7 @@ export const useStore = create((set, get) => ({
   mappingReviewIds: [],
   mappingReviewOpen: false,
   visibilityRules: {},
+  textAlignOverrides: {},
 
   // Generation state
   generation: {
@@ -64,6 +71,7 @@ export const useStore = create((set, get) => ({
       mappingReviewIds,
       mappingReviewOpen: csvHeaders.length > 0 && mappingReviewIds.length > 0,
       visibilityRules: {},
+      textAlignOverrides: {},
       selectedNodeId: null,
       selectedRawId: null,
       selectionTick: 0,
@@ -90,7 +98,12 @@ export const useStore = create((set, get) => ({
   },
 
   setMapping: (rawId, entry) => {
-    set((s) => ({ mapping: { ...s.mapping, [rawId]: entry } }))
+    set((s) => ({
+      mapping: {
+        ...s.mapping,
+        [rawId]: { ...(s.mapping[rawId] ?? { source: 'none' }), ...entry },
+      },
+    }))
   },
 
   closeMappingReview: () => set({ mappingReviewOpen: false }),
@@ -105,7 +118,24 @@ export const useStore = create((set, get) => ({
 
   setManualOverride: (rawId, value) => {
     set((s) => ({
-      mapping: { ...s.mapping, [rawId]: { source: 'manual', value } },
+      mapping: {
+        ...s.mapping,
+        [rawId]: { ...(s.mapping[rawId] ?? { source: 'none' }), source: 'manual', value },
+      },
+    }))
+  },
+
+  setTextColorMapping: (rawId, { colorSource, colorColumn, colorValue }) => {
+    set((s) => ({
+      mapping: {
+        ...s.mapping,
+        [rawId]: {
+          ...(s.mapping[rawId] ?? { source: 'none' }),
+          colorSource,
+          ...(colorColumn !== undefined ? { colorColumn } : {}),
+          ...(colorValue !== undefined ? { colorValue } : {}),
+        },
+      },
     }))
   },
 
@@ -124,6 +154,71 @@ export const useStore = create((set, get) => ({
       const next = { ...s.visibilityRules }
       delete next[rawId]
       return { visibilityRules: next }
+    })
+  },
+
+  setTextAlignment: (rawId, alignment) => {
+    const { docString, layers, textAlignOverrides } = get()
+    if (!docString) return
+
+    const frame = getSvgFrame(docString)
+    const anchorX = anchorXForAlignment(alignment, frame)
+    const nextDoc = patchTextAlignment(docString, rawId, alignment, anchorX)
+    const nextLayers = layers.map((layer) => (
+      layer.rawId === rawId && layer.textStyle
+        ? {
+            ...layer,
+            textStyle: {
+              ...layer.textStyle,
+              alignment,
+              anchor: alignment === 'center' ? 'middle' : alignment === 'right' ? 'end' : 'start',
+            },
+          }
+        : layer
+    ))
+
+    set({
+      docString: nextDoc,
+      layers: nextLayers,
+      textAlignOverrides: {
+        ...textAlignOverrides,
+        [rawId]: { alignment, anchorX },
+      },
+      previewResults: [],
+    })
+  },
+
+  clearTextAlignment: (rawId) => {
+    const { docString, layers, textAlignOverrides } = get()
+    if (!docString) return
+
+    const layer = layers.find((entry) => entry.rawId === rawId)
+    const nextDoc = restoreTextAlignment(docString, rawId, layer?.textStyle)
+    const nextOverrides = { ...textAlignOverrides }
+    delete nextOverrides[rawId]
+
+    const nextLayers = layers.map((entry) => (
+      entry.rawId === rawId && entry.textStyle
+        ? {
+            ...entry,
+            textStyle: {
+              ...entry.textStyle,
+              alignment: entry.textStyle.originalAnchor === 'middle'
+                ? 'center'
+                : entry.textStyle.originalAnchor === 'end'
+                  ? 'right'
+                  : 'left',
+              anchor: entry.textStyle.originalAnchor ?? 'start',
+            },
+          }
+        : entry
+    ))
+
+    set({
+      docString: nextDoc,
+      layers: nextLayers,
+      textAlignOverrides: nextOverrides,
+      previewResults: [],
     })
   },
 

@@ -1,4 +1,5 @@
 import { normalizeName } from './normalize'
+import { extractTextLayout, getTextFill, stampTextLayout } from './textStyle'
 
 function getLayerName(el) {
   return (
@@ -8,13 +9,25 @@ function getLayerName(el) {
   )
 }
 
-function getLayerInfo(el) {
+function getLayerInfo(el, svgEl) {
   const tag = el.tagName.toLowerCase()
 
   if (tag === 'text') {
+    stampTextLayout(el, svgEl)
+    const layout = extractTextLayout(el)
     return {
       elementType: 'text',
       currentValue: el.textContent.trim(),
+      currentFill: getTextFill(el),
+      textStyle: {
+        alignment: layout.alignment,
+        anchor: layout.anchor,
+        originalAnchor: layout.anchor,
+        originalX: layout.x,
+        letterSpacing: layout.letterSpacingRaw,
+        wordSpacing: layout.wordSpacingRaw,
+        kerning: layout.kerning,
+      },
     }
   }
 
@@ -63,7 +76,7 @@ export function parseSvg(text) {
       if (tag === 'defs' || tag === 'tspan') return
 
       const rawId = getLayerName(el)
-      const info = getLayerInfo(el)
+      const info = getLayerInfo(el, svgEl)
       const childPath = `${path}-${index}`
       const editable = Boolean(rawId && info && !seenIds.has(rawId))
 
@@ -77,6 +90,8 @@ export function parseSvg(text) {
           normalizedName: normalizeName(rawId),
           elementType: info.elementType,
           currentValue: info.currentValue,
+          ...(info.currentFill ? { currentFill: info.currentFill } : {}),
+          ...(info.textStyle ? { textStyle: info.textStyle } : {}),
         }
 
         layers.push(layer)

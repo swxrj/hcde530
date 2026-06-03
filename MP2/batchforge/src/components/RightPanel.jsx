@@ -18,6 +18,105 @@ const OPERATOR_LABELS = {
 
 const VALUE_OPERATORS = new Set(['equals', 'not_equals', 'contains', 'not_contains', 'gt', 'gte', 'lt', 'lte'])
 
+const ALIGN_OPTIONS = [
+  {
+    id: 'left',
+    label: 'Align left',
+    icon: (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <path d="M4 6h16M4 12h10M4 18h14" />
+      </svg>
+    ),
+  },
+  {
+    id: 'center',
+    label: 'Align center',
+    icon: (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <path d="M4 6h16M7 12h10M5 18h14" />
+      </svg>
+    ),
+  },
+  {
+    id: 'right',
+    label: 'Align right',
+    icon: (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <path d="M4 6h16M10 12h10M6 18h14" />
+      </svg>
+    ),
+  },
+]
+
+function TextAlignmentToolbar({ layer }) {
+  const textAlignOverrides = useStore((s) => s.textAlignOverrides)
+  const setTextAlignment = useStore((s) => s.setTextAlignment)
+  const clearTextAlignment = useStore((s) => s.clearTextAlignment)
+
+  const override = textAlignOverrides[layer.rawId]
+  const alignment = override?.alignment ?? layer.textStyle?.alignment ?? 'left'
+  const isCustom = Boolean(override)
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <label
+          className="text-[11px] font-bold uppercase tracking-widest"
+          style={{ color: 'var(--ink-35)' }}
+        >
+          Text alignment
+        </label>
+        {isCustom && (
+          <button
+            type="button"
+            className="text-[10px] font-semibold"
+            style={{ color: 'rgba(14,165,233,0.82)' }}
+            onClick={() => clearTextAlignment(layer.rawId)}
+          >
+            Reset
+          </button>
+        )}
+      </div>
+      <div
+        className="inline-flex w-fit rounded-xl p-1"
+        style={{
+          background: 'rgba(255,255,255,0.72)',
+          border: '1px solid rgba(26,43,74,0.1)',
+          boxShadow: '0 1px 0 rgba(255,255,255,0.58) inset',
+        }}
+      >
+        {ALIGN_OPTIONS.map((option) => {
+          const active = alignment === option.id
+          return (
+            <motion.button
+              key={option.id}
+              type="button"
+              aria-label={option.label}
+              aria-pressed={active}
+              title={option.label}
+              whileTap={{ scale: 0.96 }}
+              className="grid h-9 w-10 place-items-center rounded-lg"
+              style={{
+                background: active
+                  ? 'linear-gradient(158deg, rgba(56,189,248,0.88), rgba(14,165,233,0.76))'
+                  : 'transparent',
+                color: active ? 'white' : 'rgba(26,43,74,0.52)',
+                boxShadow: active ? '0 4px 12px rgba(14,165,233,0.24)' : 'none',
+              }}
+              onClick={() => setTextAlignment(layer.rawId, option.id)}
+            >
+              {option.icon}
+            </motion.button>
+          )
+        })}
+      </div>
+      <p className="text-[11px] leading-snug" style={{ color: 'var(--ink-35)' }}>
+        Aligns against the artboard edges. Updates the canvas live before preview.
+      </p>
+    </div>
+  )
+}
+
 function InfoTip() {
   const [open, setOpen] = useState(false)
 
@@ -276,6 +375,109 @@ function VisibilitySection({ rawId }) {
   )
 }
 
+function TextColorSection({ layer }) {
+  const csvHeaders = useStore((s) => s.csvHeaders)
+  const csvRows = useStore((s) => s.csvRows)
+  const mapping = useStore((s) => s.mapping)
+  const setTextColorMapping = useStore((s) => s.setTextColorMapping)
+
+  const m = mapping[layer.rawId] ?? { source: 'none' }
+  const fill = layer.currentFill ?? '#000000'
+  const colorPreview = m.colorSource === 'csv' && m.colorColumn
+    ? csvRows.map((r) => r[m.colorColumn]).filter(Boolean)
+    : []
+  const totalColors = m.colorSource === 'csv' && m.colorColumn ? csvRows.length : 0
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <label
+        className="text-[11px] font-bold uppercase tracking-widest"
+        style={{ color: 'var(--ink-35)' }}
+      >
+        Text color
+      </label>
+
+      <div className="flex items-center gap-2.5">
+        <span
+          className="w-8 h-8 rounded-xl shrink-0"
+          style={{
+            background: fill,
+            border: '1px solid rgba(26,43,74,0.12)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35)',
+          }}
+        />
+        <span className="text-[11px] font-mono truncate" style={{ color: 'var(--ink-60)' }}>
+          Default: {fill}
+        </span>
+      </div>
+
+      {csvHeaders.length > 0 && (
+        <>
+          <select
+            className="bf-input bf-select w-full h-9 pl-3 text-sm cursor-pointer"
+            value={m.colorSource === 'csv' ? (m.colorColumn ?? '') : ''}
+            onChange={(e) => {
+              const col = e.target.value
+              setTextColorMapping(
+                layer.rawId,
+                col
+                  ? { colorSource: 'csv', colorColumn: col }
+                  : { colorSource: 'none', colorColumn: undefined, colorValue: undefined },
+              )
+            }}
+          >
+            <option value="">— Keep default color —</option>
+            {csvHeaders.map((h) => (
+              <option key={h} value={h}>{h}</option>
+            ))}
+          </select>
+
+          {colorPreview.length > 0 && (
+            <div className="bf-inset flex flex-col gap-1 rounded-xl p-3 max-h-36 overflow-y-auto">
+              <div
+                className="flex items-center justify-between gap-3 pb-2 mb-1"
+                style={{ borderBottom: '1px solid rgba(26,43,74,0.07)' }}
+              >
+                <span className="text-[11px] font-semibold" style={{ color: 'var(--ink-35)' }}>
+                  Colors
+                </span>
+                <span className="text-[11px] font-mono" style={{ color: 'var(--ink-60)' }}>
+                  {colorPreview.length.toLocaleString()} / {totalColors.toLocaleString()}
+                </span>
+              </div>
+              {colorPreview.map((v, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 text-[11px] font-mono"
+                  style={{ color: 'var(--ink-60)' }}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ background: /^#|^rgb/i.test(v) ? v : 'rgba(26,43,74,0.12)' }}
+                  />
+                  <span className="truncate">{v}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {m.colorSource !== 'csv' && (
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--ink-35)' }}>
+            Fixed color override
+          </span>
+          <ColorInput
+            value={m.colorValue ?? fill}
+            onChange={(v) => setTextColorMapping(layer.rawId, { colorSource: 'manual', colorValue: v })}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function LayerDetail({ layer }) {
   const csvHeaders = useStore((s) => s.csvHeaders)
   const csvRows = useStore((s) => s.csvRows)
@@ -284,7 +486,9 @@ function LayerDetail({ layer }) {
   const setManualOverride = useStore((s) => s.setManualOverride)
 
   const m = mapping[layer.rawId] ?? { source: 'none' }
-  const isMapped = m.source === 'csv' || m.source === 'manual'
+  const isTextMapped = m.source === 'csv' || m.source === 'manual'
+  const isColorMapped = m.colorSource === 'csv' || m.colorSource === 'manual'
+  const isMapped = isTextMapped || isColorMapped
 
   const preview = m.source === 'csv' && m.column
     ? csvRows.map((r) => r[m.column]).filter(Boolean)
@@ -306,12 +510,20 @@ function LayerDetail({ layer }) {
           >
             {layer.elementType}
           </span>
-          {isMapped && (
+          {isTextMapped && (
             <span
               className="text-[10px] px-2 py-0.5 rounded-lg font-semibold"
               style={{ background: 'rgba(34,197,94,0.12)', color: 'rgba(22,163,74,0.9)' }}
             >
-              mapped
+              text mapped
+            </span>
+          )}
+          {isColorMapped && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-lg font-semibold"
+              style={{ background: 'rgba(249,115,22,0.12)', color: 'rgba(234,88,12,0.9)' }}
+            >
+              color mapped
             </span>
           )}
         </div>
@@ -328,13 +540,27 @@ function LayerDetail({ layer }) {
         )}
       </div>
 
-      {isMapped && (
+      {layer.elementType === 'text' && <TextAlignmentToolbar layer={layer} />}
+
+      {layer.elementType === 'text' && <TextColorSection layer={layer} />}
+
+      {isTextMapped && (
         <button
           type="button"
           className="bf-btn-ghost h-9 w-full rounded-xl"
-          onClick={() => setMapping(layer.rawId, { source: 'none' })}
+          onClick={() => setMapping(layer.rawId, { source: 'none', column: undefined, value: undefined })}
         >
-          Unmap selected layer
+          Unmap text
+        </button>
+      )}
+
+      {isTextMapped && layer.elementType === 'color' && (
+        <button
+          type="button"
+          className="bf-btn-ghost h-9 w-full rounded-xl"
+          onClick={() => setMapping(layer.rawId, { source: 'none', column: undefined, value: undefined })}
+        >
+          Unmap layer
         </button>
       )}
 
@@ -347,14 +573,17 @@ function LayerDetail({ layer }) {
             className="text-[11px] font-bold uppercase tracking-widest"
             style={{ color: 'var(--ink-35)' }}
           >
-            Map to CSV column
+            {layer.elementType === 'text' ? 'Map text to CSV column' : 'Map to CSV column'}
           </label>
           <select
             className="bf-input bf-select w-full h-9 pl-3 text-sm cursor-pointer"
             value={m.source === 'csv' ? (m.column ?? '') : ''}
             onChange={(e) => {
               const col = e.target.value
-              setMapping(layer.rawId, col ? { source: 'csv', column: col } : { source: 'none' })
+              setMapping(
+                layer.rawId,
+                col ? { source: 'csv', column: col } : { source: 'none', column: undefined, value: undefined },
+              )
             }}
           >
             <option value="">— None (manual override) —</option>

@@ -1,6 +1,7 @@
 import JSZip from 'jszip'
 import { isValidCssColor } from './colors'
 import { fitText } from './textFit'
+import { applyTextColor } from './textStyle'
 import { getLocalizedValue } from './localization'
 import { applyMirroredGroups, applyRtlText, isRtlRow } from './rtl'
 import {
@@ -55,7 +56,10 @@ export async function generateBatch({
   let lastPreviewAt = -Infinity
   const rowsToGenerate = rows.slice(0, maxRows)
 
-  const layerEntries = Object.entries(mapping).filter(([, m]) => m.source !== 'none')
+  const layerEntries = Object.entries(mapping).filter(([, m]) =>
+    m.source === 'csv' || m.source === 'manual'
+    || m.colorSource === 'csv' || m.colorSource === 'manual',
+  )
   const visibilityEntries = Object.entries(visibilityRules)
 
   for (let i = 0; i < rowsToGenerate.length; i++) {
@@ -110,6 +114,9 @@ export async function generateBatch({
 
       let value
       let locale = 'en-US'
+      const hasTextMap = m.source === 'csv' || m.source === 'manual'
+      const hasColorMap = m.colorSource === 'csv' || m.colorSource === 'manual'
+
       if (m.source === 'csv') {
         const localized = getLocalizedValue(row, m.column, (warning) => warn({ ...warning, layer: rawId }))
         value = localized.value
@@ -121,27 +128,45 @@ export async function generateBatch({
         value = m.value
       }
 
-      if (value === undefined || value === null || String(value).trim() === '') continue
-
       const tag = el.tagName.toLowerCase()
       if (tag === 'text' || tag === 'tspan') {
-        if (isRtlRow(row, locale)) {
-          applyRtlText(el)
-          warn({ type: 'rtl', layer: rawId, message: 'applied RTL text direction' })
+        if (hasTextMap && value !== undefined && value !== null && String(value).trim() !== '') {
+          if (isRtlRow(row, locale)) {
+            applyRtlText(el)
+            warn({ type: 'rtl', layer: rawId, message: 'applied RTL text direction' })
+          }
+
+          fitText(el, value, (warning) => warn({ ...warning, layer: rawId }))
         }
 
-        fitText(el, value, (warning) => warn({ ...warning, layer: rawId }))
+        if (hasColorMap) {
+          const color = m.colorSource === 'csv'
+            ? row[m.colorColumn]
+            : m.colorValue
+
+          if (color === undefined || color === null || String(color).trim() === '') {
+            warn({ type: 'missing-field', layer: rawId, field: m.colorColumn ?? 'color' })
+          } else if (!isValidCssColor(color)) {
+            warn({ type: 'color', layer: rawId, value: color })
+          } else {
+            applyTextColor(el, String(color).trim())
+          }
+        }
+
+        continue
+      }
+
+      if (!hasTextMap || value === undefined || value === null || String(value).trim() === '') continue
+
+      // color layer
+      if (!isValidCssColor(value)) {
+        warn({ type: 'color', layer: rawId, value })
+        continue
+      }
+      if (el.hasAttribute('fill')) {
+        el.setAttribute('fill', value)
       } else {
-        // color layer
-        if (!isValidCssColor(value)) {
-          warn({ type: 'color', layer: rawId, value })
-          continue
-        }
-        if (el.hasAttribute('fill')) {
-          el.setAttribute('fill', value)
-        } else {
-          el.setAttribute('stroke', value)
-        }
+        el.setAttribute('stroke', value)
       }
     }
 

@@ -30,17 +30,52 @@ export function parseCsv(file) {
 
 /**
  * Auto-map layers to CSV headers by normalized name equality.
+ * Text layers also pick up companion color columns like name__fill.
  * @param {Layer[]} layers
  * @param {string[]} headers
- * @returns {Record<string, { source: string, column?: string }>}
+ * @returns {Record<string, object>}
  */
+function findColorColumn(rawId, headers) {
+  const normalizedId = normalizeName(rawId)
+  const candidates = [
+    `${rawId}__fill`,
+    `${rawId}__color`,
+    `${rawId}_fill`,
+    `${rawId}_color`,
+    `fill_${rawId}`,
+    `color_${rawId}`,
+  ]
+
+  for (const candidate of candidates) {
+    const match = headers.find((h) => h === candidate || normalizeName(h) === normalizeName(candidate))
+    if (match) return match
+  }
+
+  return headers.find((h) => {
+    const n = normalizeName(h)
+    return n === `${normalizedId} fill` || n === `${normalizedId} color`
+  })
+}
+
 export function autoMap(layers, headers) {
   const mapping = {}
   for (const layer of layers) {
+    const entry = { source: 'none' }
     const match = headers.find((h) => normalizeName(h) === layer.normalizedName)
-    mapping[layer.rawId] = match
-      ? { source: 'csv', column: match }
-      : { source: 'none' }
+    if (match) {
+      entry.source = 'csv'
+      entry.column = match
+    }
+
+    if (layer.elementType === 'text') {
+      const colorColumn = findColorColumn(layer.rawId, headers)
+      if (colorColumn) {
+        entry.colorSource = 'csv'
+        entry.colorColumn = colorColumn
+      }
+    }
+
+    mapping[layer.rawId] = entry
   }
   return mapping
 }
