@@ -160,6 +160,7 @@ function LinkedMappingGroup({ rect, lane, items, connectorTone, onSelect }) {
       </svg>
       <div
         className="pointer-events-auto absolute z-10 flex items-center"
+        data-bf-mapping-tag
         style={{ left: labelLeft, top: labelTop, height: labelHeight }}
       >
         {items.map((item, index) => {
@@ -285,10 +286,10 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
 
   const compute = useCallback(() => {
     const wrapper = svgWrapRef.current
-    if (!wrapper || nodes.length === 0) { setRects([]); return }
+    const stageEl = stageRef.current
+    if (!wrapper || !stageEl || nodes.length === 0) { setRects([]); return }
 
-    const wrapBr = wrapper.getBoundingClientRect()
-    const stageBr = stageRef.current?.getBoundingClientRect() ?? wrapBr
+    const stageBr = stageEl.getBoundingClientRect()
 
     const next = []
     for (const node of nodes) {
@@ -302,14 +303,14 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
         nodeId: node.nodeId,
         rawId: node.rawId,
         isRaster: node.elementType === 'image' || node.isRaster === true,
-        x: bbox.left - wrapBr.left,
-        y: bbox.top - wrapBr.top,
+        x: bbox.left - stageBr.left,
+        y: bbox.top - stageBr.top,
         w: bbox.width,
         h: bbox.height,
-        stageLeft: stageBr.left - wrapBr.left,
-        stageRight: stageBr.right - wrapBr.left,
-        stageTop: stageBr.top - wrapBr.top,
-        stageBottom: stageBr.bottom - wrapBr.top,
+        stageLeft: 0,
+        stageRight: stageBr.width,
+        stageTop: 0,
+        stageBottom: stageBr.height,
       })
     }
     setRects(next)
@@ -450,9 +451,13 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
                   borderStyle: isSelected ? 'solid' : 'dashed',
                   boxSizing: 'border-box',
                 }}
+                data-bf-layer-hit
                 onMouseEnter={() => setHoveredId(r.nodeId)}
                 onMouseLeave={() => setHoveredId(null)}
-                onClick={() => onSelect(r.nodeId, r.rawId)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSelect(r.nodeId, r.rawId)
+                }}
               />
             )
           }
@@ -461,6 +466,7 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
             <motion.div
               key={r.nodeId}
               className="absolute pointer-events-auto cursor-pointer"
+              data-bf-layer-hit
               animate={{
                 borderColor: isSelected
                   ? 'rgba(14,165,233,0.9)'
@@ -484,7 +490,10 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
               }}
               onMouseEnter={() => setHoveredId(r.nodeId)}
               onMouseLeave={() => setHoveredId(null)}
-              onClick={() => onSelect(r.nodeId, r.rawId)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onSelect(r.nodeId, r.rawId)
+              }}
             />
           )
         })}
@@ -514,7 +523,10 @@ function MappingToggle({ active, onClick }) {
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
       }}
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
     >
       <motion.span
         className="grid h-7 w-7 place-items-center rounded-full"
@@ -560,6 +572,16 @@ export default function Canvas() {
     selectNode(nodeId, rawId)
   }, [selectNode])
 
+  const handleStageClick = useCallback((e) => {
+    if (!selectedNodeId) return
+    if (!stageRef.current?.contains(e.target)) return
+    if (e.target.closest('[aria-label="Toggle mapping view"]')) return
+    if (e.target.closest('[data-bf-layer-hit]')) return
+    if (e.target.closest('[data-bf-mapping-tag]')) return
+
+    selectNode(null, null)
+  }, [selectedNodeId, selectNode])
+
   if (!displaySvg) {
     return (
       <div className="flex-1 grid place-items-center">
@@ -569,7 +591,11 @@ export default function Canvas() {
   }
 
   return (
-    <div ref={stageRef} className="relative flex-1 flex items-center justify-center p-12 overflow-hidden min-h-0">
+    <div
+      ref={stageRef}
+      className="relative flex-1 flex items-center justify-center p-12 overflow-hidden min-h-0"
+      onClick={handleStageClick}
+    >
       {!generation.running && Object.values(mapping).some((m) => m.source === 'csv' || m.colorSource === 'csv') && (
         <MappingToggle active={showMappingOverlay} onClick={toggleMappingOverlay} />
       )}
@@ -580,21 +606,21 @@ export default function Canvas() {
           className="bf-canvas-wrap rounded-2xl overflow-hidden [&_svg]:block [&_svg]:max-w-full [&_svg]:max-h-[calc(100vh-14rem)]"
           dangerouslySetInnerHTML={{ __html: displaySvg }}
         />
-
-        {!generation.running && nodes.length > 0 && (
-          <Overlays
-            stageRef={stageRef}
-            svgWrapRef={svgWrapRef}
-            nodes={nodes}
-            selectedNodeId={selectedNodeId}
-            mapping={mapping}
-            visibilityRules={visibilityRules}
-            csvRows={csvRows}
-            showMappingOverlay={showMappingOverlay}
-            onSelect={handleSelect}
-          />
-        )}
       </div>
+
+      {!generation.running && nodes.length > 0 && (
+        <Overlays
+          stageRef={stageRef}
+          svgWrapRef={svgWrapRef}
+          nodes={nodes}
+          selectedNodeId={selectedNodeId}
+          mapping={mapping}
+          visibilityRules={visibilityRules}
+          csvRows={csvRows}
+          showMappingOverlay={showMappingOverlay}
+          onSelect={handleSelect}
+        />
+      )}
     </div>
   )
 }
