@@ -670,6 +670,11 @@ function findNode(nodes, nodeId) {
 }
 
 function NodeDetail({ node }) {
+  const isImage = node.elementType === 'image'
+  const hrefLabel = node.imageHref
+    ? (node.imageHref.startsWith('data:') ? 'Embedded image data' : node.imageHref)
+    : 'No source'
+
   return (
     <div className="flex flex-col gap-5">
       <div className="bf-inset rounded-2xl px-4 py-4 flex flex-col gap-2.5">
@@ -679,17 +684,35 @@ function NodeDetail({ node }) {
             style={
               node.kind === 'group'
                 ? { background: 'rgba(99,102,241,0.12)', color: 'rgba(79,70,229,0.85)' }
-                : { background: 'rgba(26,43,74,0.08)', color: 'rgba(26,43,74,0.55)' }
+                : isImage
+                  ? { background: 'var(--image-bg)', color: 'var(--image-strong)' }
+                  : { background: 'rgba(26,43,74,0.08)', color: 'rgba(26,43,74,0.55)' }
             }
           >
-            {node.kind === 'group' ? 'group' : node.tag}
+            {node.kind === 'group' ? 'group' : isImage ? 'image' : node.tag}
           </span>
-          {!node.editable && node.kind !== 'group' && (
+          {isImage && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-lg font-semibold"
+              style={{ background: 'var(--image-bg)', color: 'var(--image-strong)' }}
+            >
+              raster
+            </span>
+          )}
+          {!node.editable && node.kind !== 'group' && !isImage && (
             <span
               className="text-[10px] px-2 py-0.5 rounded-lg font-semibold"
               style={{ background: 'rgba(26,43,74,0.08)', color: 'rgba(26,43,74,0.45)' }}
             >
               not mappable
+            </span>
+          )}
+          {isImage && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-lg font-semibold"
+              style={{ background: 'rgba(26,43,74,0.08)', color: 'rgba(26,43,74,0.45)' }}
+            >
+              not batch-mappable
             </span>
           )}
         </div>
@@ -707,6 +730,26 @@ function NodeDetail({ node }) {
       </div>
 
       {node.rawId && <VisibilitySection rawId={node.rawId} />}
+
+      {isImage && (
+        <div className="bf-inset rounded-2xl px-4 py-4 flex flex-col gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--ink-35)' }}>
+            Raster source
+          </p>
+          <div className="grid grid-cols-[72px_1fr] gap-x-3 gap-y-1 text-[12px]">
+            <span style={{ color: 'var(--ink-35)' }}>Source</span>
+            <span className="font-mono break-all" style={{ color: 'var(--ink-60)' }}>{hrefLabel}</span>
+            {(node.imageWidth || node.imageHeight) && (
+              <>
+                <span style={{ color: 'var(--ink-35)' }}>Size</span>
+                <span className="font-mono" style={{ color: 'var(--ink-60)' }}>
+                  {[node.imageWidth, node.imageHeight].filter(Boolean).join(' × ')}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="bf-inset rounded-2xl px-4 py-4 flex flex-col gap-2">
         <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--ink-35)' }}>

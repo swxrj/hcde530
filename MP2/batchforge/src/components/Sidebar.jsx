@@ -1,15 +1,195 @@
-import { useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { useStore } from '../store/useStore'
 import LayerList from './LayerList'
 import EmptyState from './EmptyState'
 
 const FILTERS = [
-  { id: 'all', label: 'All' },
-  { id: 'text', label: 'Text' },
-  { id: 'color', label: 'Color' },
-  { id: 'mapped', label: 'Mapped' },
+  {
+    id: 'all',
+    label: 'All layers',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </svg>
+    ),
+  },
+  {
+    id: 'text',
+    label: 'Text',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 7V4h16v3" />
+        <path d="M9 20h6" />
+        <path d="M12 4v16" />
+      </svg>
+    ),
+  },
+  {
+    id: 'color',
+    label: 'Color',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="8.5" cy="10.5" r="1.5" fill="currentColor" stroke="none" />
+        <circle cx="15" cy="9" r="1.5" fill="currentColor" stroke="none" />
+        <circle cx="14" cy="15" r="1.5" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+  {
+    id: 'image',
+    label: 'Image',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <circle cx="8.5" cy="10.5" r="1.5" />
+        <path d="m21 16-5.5-5.5L5 21" />
+      </svg>
+    ),
+  },
+  {
+    id: 'mapped',
+    label: 'Mapped',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+    ),
+  },
 ]
+
+const TOOLTIP_HIDE_MS = 500
+
+const FilterButton = forwardRef(function FilterButton({ active, item, onSelect }, ref) {
+  const [tooltipVisible, setTooltipVisible] = useState(false)
+  const hideTimer = useRef(null)
+
+  useEffect(() => () => clearTimeout(hideTimer.current), [])
+
+  const showTooltip = () => {
+    clearTimeout(hideTimer.current)
+    setTooltipVisible(true)
+  }
+
+  const scheduleHide = () => {
+    clearTimeout(hideTimer.current)
+    hideTimer.current = setTimeout(() => setTooltipVisible(false), TOOLTIP_HIDE_MS)
+  }
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={showTooltip}
+      onMouseLeave={scheduleHide}
+    >
+      <button
+        ref={ref}
+        type="button"
+        aria-label={item.label}
+        aria-pressed={active}
+        onClick={() => onSelect(item.id)}
+        className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors z-10 cursor-pointer"
+        style={{ color: active ? '#fff' : 'rgba(26,43,74,0.48)' }}
+      >
+        <span className="relative z-10 w-[17px] h-[17px]">{item.icon}</span>
+      </button>
+      <div
+        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-30 px-2 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap pointer-events-none transition-opacity duration-150"
+        style={{
+          background: 'rgba(26,43,74,0.92)',
+          color: 'rgba(255,255,255,0.96)',
+          boxShadow: '0 6px 18px rgba(26,43,74,0.22)',
+          opacity: tooltipVisible ? 1 : 0,
+        }}
+      >
+        {item.label}
+      </div>
+    </div>
+  )
+})
+
+function FilterBar({ filter, onSelect, pillInstantRef }) {
+  const containerRef = useRef(null)
+  const itemRefs = useRef([])
+  const [pillStyle, setPillStyle] = useState(null)
+
+  const activeIndex = Math.max(0, FILTERS.findIndex((f) => f.id === filter))
+  const pillInstant = pillInstantRef?.current === true
+
+  const updatePill = useCallback(() => {
+    const container = containerRef.current
+    const btn = itemRefs.current[activeIndex]
+    if (!container || !btn) return null
+
+    const cr = container.getBoundingClientRect()
+    const br = btn.getBoundingClientRect()
+    return {
+      x: br.left - cr.left,
+      y: br.top - cr.top,
+      width: br.width,
+      height: br.height,
+    }
+  }, [activeIndex])
+
+  useLayoutEffect(() => {
+    const next = updatePill()
+    if (next) setPillStyle(next)
+  }, [updatePill, filter])
+
+  useEffect(() => {
+    if (pillInstantRef) {
+      pillInstantRef.current = false
+    }
+  }, [filter, pillInstantRef])
+
+  useEffect(() => {
+    const onResize = () => {
+      const next = updatePill()
+      if (next) setPillStyle(next)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [updatePill])
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative flex items-center justify-between gap-2 rounded-xl px-2 py-2"
+      style={{
+        background: 'rgba(26,43,74,0.06)',
+        boxShadow: 'inset 0 2px 5px rgba(26,43,74,0.08), inset 0 1px 2px rgba(26,43,74,0.04)',
+      }}
+    >
+      {pillStyle && (
+        <motion.div
+          className="absolute rounded-xl bf-filter-active pointer-events-none"
+          initial={false}
+          animate={pillStyle}
+          transition={
+            pillInstant
+              ? { duration: 0 }
+              : { type: 'tween', duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }
+          }
+          style={{ left: 0, top: 0 }}
+        />
+      )}
+      {FILTERS.map((f, index) => (
+        <FilterButton
+          key={f.id}
+          ref={(el) => { itemRefs.current[index] = el }}
+          active={filter === f.id}
+          item={f}
+          onSelect={onSelect}
+        />
+      ))}
+    </div>
+  )
+}
 
 const CARD_ICONS = {
   Design: (
@@ -165,6 +345,11 @@ export default function Sidebar() {
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  const pillInstantRef = useRef(false)
+  const handleFilterFromSelection = useCallback((id) => {
+    pillInstantRef.current = true
+    setFilter(id)
+  }, [])
   const totalLayerNodes = countTreeNodes(layerTree)
 
   const handleSvgUpload = (file) => {
@@ -286,36 +471,11 @@ export default function Sidebar() {
               />
             </div>
 
-            {/* Filter tabs */}
-            <div
-              className="relative flex gap-0.5 rounded-xl p-1"
-              style={{
-                background: 'rgba(26,43,74,0.06)',
-                boxShadow: 'inset 0 2px 5px rgba(26,43,74,0.08), inset 0 1px 2px rgba(26,43,74,0.04)',
-              }}
-            >
-              {FILTERS.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setFilter(f.id)}
-                  className="relative flex-1 text-[12px] py-1.5 rounded-lg font-semibold transition-colors z-10 cursor-pointer"
-                  style={{ color: filter === f.id ? '#fff' : 'rgba(26,43,74,0.45)' }}
-                >
-                  {filter === f.id && (
-                    <motion.div
-                      layoutId="filter-pill"
-                      className="absolute inset-0 rounded-lg bf-filter-active"
-                      transition={{ type: 'spring', bounce: 0.18, duration: 0.32 }}
-                    />
-                  )}
-                  <span className="relative z-10">{f.label}</span>
-                </button>
-              ))}
-            </div>
+            <FilterBar filter={filter} onSelect={setFilter} pillInstantRef={pillInstantRef} />
           </div>
 
           <div className="flex-1 overflow-y-auto p-3">
-            <LayerList search={search} filter={filter} />
+            <LayerList search={search} filter={filter} onFilterChange={handleFilterFromSelection} />
           </div>
         </>
       )}

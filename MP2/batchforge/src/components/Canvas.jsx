@@ -301,6 +301,7 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
       next.push({
         nodeId: node.nodeId,
         rawId: node.rawId,
+        isRaster: node.elementType === 'image' || node.isRaster === true,
         x: bbox.left - wrapBr.left,
         y: bbox.top - wrapBr.top,
         w: bbox.width,
@@ -420,6 +421,41 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
           const isSelected = r.nodeId === selectedNodeId
           const isHovered = r.nodeId === hoveredId
           const active = isSelected || isHovered
+
+          if (r.isRaster) {
+            return (
+              <motion.div
+                key={r.nodeId}
+                className="absolute pointer-events-auto cursor-pointer"
+                animate={{
+                  borderColor: isSelected
+                    ? 'var(--image-border)'
+                    : isHovered
+                      ? 'rgba(180, 150, 110, 0.62)'
+                      : 'transparent',
+                  boxShadow: isSelected
+                    ? '0 0 0 3px var(--image-glow), 0 4px 14px rgba(140,110,70,0.16)'
+                    : isHovered
+                      ? '0 0 0 3px rgba(210, 180, 140, 0.16)'
+                      : 'none',
+                }}
+                transition={{ duration: 0.12 }}
+                style={{
+                  left: r.x - 3,
+                  top: r.y - 3,
+                  width: r.w + 6,
+                  height: r.h + 6,
+                  border: '2px solid transparent',
+                  borderRadius: 8,
+                  borderStyle: isSelected ? 'solid' : 'dashed',
+                  boxSizing: 'border-box',
+                }}
+                onMouseEnter={() => setHoveredId(r.nodeId)}
+                onMouseLeave={() => setHoveredId(null)}
+                onClick={() => onSelect(r.nodeId, r.rawId)}
+              />
+            )
+          }
 
           return (
             <motion.div

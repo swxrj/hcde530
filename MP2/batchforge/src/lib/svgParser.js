@@ -9,8 +9,95 @@ function getLayerName(el) {
   )
 }
 
-function getLayerInfo(el, svgEl) {
+function getImageHref(el) {
+  return el.getAttribute('href') || el.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || ''
+}
+
+function getFragmentRef(el) {
+  const href = getImageHref(el)
+  return href.startsWith('#') ? href.slice(1) : href
+}
+
+function extractUrlRef(value) {
+  if (!value?.startsWith('url(')) return null
+  const match = value.match(/^url\(#([^)]+)\)$/)
+  return match ? match[1] : null
+}
+
+function getPaintRef(el, attr) {
+  const direct = extractUrlRef(el.getAttribute(attr))
+  if (direct) return direct
+
+  const style = el.getAttribute('style') ?? ''
+  const match = style.match(new RegExp(`${attr}\\s*:\\s*url\\(#([^)]+)\\)`))
+  return match ? match[1] : null
+}
+
+function extractImageInfo(el) {
+  return {
+    imageHref: getImageHref(el),
+    imageWidth: el.getAttribute('width') ?? '',
+    imageHeight: el.getAttribute('height') ?? '',
+    imageName: el.getAttribute('data-name') || el.getAttribute('id') || '',
+  }
+}
+
+function buildRasterIndex(doc) {
+  const imageById = new Map()
+  const patternToImage = new Map()
+
+  doc.querySelectorAll('image').forEach((img) => {
+    const id = img.getAttribute('id')
+    if (!id || !getImageHref(img)) return
+    imageById.set(id, extractImageInfo(img))
+  })
+
+  doc.querySelectorAll('pattern').forEach((pattern) => {
+    const patternId = pattern.getAttribute('id')
+    if (!patternId) return
+
+    const embeddedImage = pattern.querySelector('image')
+    if (embeddedImage && getImageHref(embeddedImage)) {
+      patternToImage.set(patternId, extractImageInfo(embeddedImage))
+      return
+    }
+
+    const useEl = pattern.querySelector('use')
+    if (!useEl) return
+
+    const refId = getFragmentRef(useEl)
+    const linked = imageById.get(refId)
+    if (linked) {
+      patternToImage.set(patternId, linked)
+    }
+  })
+
+  return { patternToImage }
+}
+
+function getRasterInfo(el, rasterIndex) {
+  for (const attr of ['fill', 'stroke']) {
+    const patternId = getPaintRef(el, attr)
+    if (!patternId) continue
+
+    const imageInfo = rasterIndex.patternToImage.get(patternId)
+    if (imageInfo) {
+      return { elementType: 'image', ...imageInfo }
+    }
+  }
+
+  return null
+}
+
+function getLayerInfo(el, svgEl, rasterIndex) {
   const tag = el.tagName.toLowerCase()
+
+  if (tag === 'image') {
+    return { elementType: 'image', ...extractImageInfo(el) }
+  }
+
+  const rasterInfo = getRasterInfo(el, rasterIndex)
+  if (rasterInfo) return rasterInfo
 
   if (tag === 'text') {
     stampTextLayout(el, svgEl)
@@ -66,6 +153,7 @@ export function parseSvg(text) {
 
   const layers = []
   const seenIds = new Set()
+  const rasterIndex = buildRasterIndex(doc)
 
   function buildTree(parent, path = 'root') {
     const nodes = []
@@ -76,11 +164,15 @@ export function parseSvg(text) {
       if (tag === 'defs' || tag === 'tspan') return
 
       const rawId = getLayerName(el)
-      const info = getLayerInfo(el, svgEl)
+      const info = getLayerInfo(el, svgEl, rasterIndex)
       const childPath = `${path}-${index}`
-      const editable = Boolean(rawId && info && !seenIds.has(rawId))
+      const isRaster = info?.elementType === 'image'
+      const editable = Boolean(rawId && info && !isRaster && !seenIds.has(rawId))
 
       el.setAttribute('data-bf-node-id', childPath)
+      if (isRaster) {
+        el.setAttribute('data-bf-raster', 'true')
+      }
 
       if (editable) {
         seenIds.add(rawId)
@@ -120,6 +212,12 @@ export function parseSvg(text) {
         editable,
         elementType: info?.elementType ?? tag,
         currentValue: info?.currentValue ?? '',
+        ...(isRaster ? {
+          isRaster: true,
+          imageHref: info.imageHref,
+          imageWidth: info.imageWidth,
+          imageHeight: info.imageHeight,
+        } : {}),
         children: childNodes,
       })
     })

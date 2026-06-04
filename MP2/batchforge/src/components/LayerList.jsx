@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
 
 const INDENT = 12
@@ -24,34 +24,53 @@ function hasVisibilityRule(node, visibilityRules) {
   return Boolean(rule && rule.mode !== 'always')
 }
 
+function elementTypeBadgeStyle(elementType) {
+  if (elementType === 'text') {
+    return { background: 'rgba(14,165,233,0.1)', color: 'rgba(14,165,233,0.8)' }
+  }
+  if (elementType === 'image') {
+    return { background: 'var(--image-bg)', color: 'var(--image-strong)' }
+  }
+  return { background: 'rgba(249,115,22,0.1)', color: 'rgba(234,88,12,0.8)' }
+}
+
+function layerIsMapped(node, mapping, visibilityRules) {
+  const m = node.rawId ? mapping[node.rawId] : null
+  return m?.source === 'csv' || m?.source === 'manual' || hasVisibilityRule(node, visibilityRules)
+}
+
 function layerMatches(node, mapping, visibilityRules, filter, q) {
   if (node.kind !== 'layer') return false
 
   const searchable = `${node.name ?? ''} ${node.rawId ?? ''}`.toLowerCase()
-  const m = node.rawId ? mapping[node.rawId] : null
-  const isMapped = m?.source === 'csv' || m?.source === 'manual' || hasVisibilityRule(node, visibilityRules)
+  const isMapped = layerIsMapped(node, mapping, visibilityRules)
 
   if (filter === 'all' && q && !searchable.includes(q)) return false
   if (filter === 'text' && node.elementType !== 'text') return false
   if (filter === 'color' && node.elementType !== 'color') return false
+  if (filter === 'image' && node.elementType !== 'image') return false
   if (filter === 'mapped' && !isMapped) return false
   if (filter !== 'all' && q && !searchable.includes(q)) return false
 
   return true
 }
 
-function filterTree(nodes, mapping, visibilityRules, filter, q, selectedNodeId) {
-  return nodes.reduce((acc, node) => {
-    const isSelected = node.nodeId === selectedNodeId
+function filterForNode(node, mapping, visibilityRules) {
+  if (!node || node.kind !== 'layer') return 'all'
+  if (node.elementType === 'image') return 'image'
+  if (node.elementType === 'text') return 'text'
+  if (node.elementType === 'color') return 'color'
+  if (layerIsMapped(node, mapping, visibilityRules)) return 'mapped'
+  return 'all'
+}
 
+function filterTree(nodes, mapping, visibilityRules, filter, q) {
+  return nodes.reduce((acc, node) => {
     if (node.kind === 'layer') {
       const matches = layerMatches(node, mapping, visibilityRules, filter, q)
-      const selectedChildren = filterTree(node.children ?? [], mapping, visibilityRules, filter, q, selectedNodeId)
-      const filteredChildren = matches
-        ? (node.children ?? [])
-        : selectedChildren
+      const filteredChildren = filterTree(node.children ?? [], mapping, visibilityRules, filter, q)
 
-      if (isSelected || matches || filteredChildren.length > 0) {
+      if (matches || filteredChildren.length > 0) {
         acc.push({ ...node, children: filteredChildren })
       }
       return acc
@@ -61,12 +80,9 @@ function filterTree(nodes, mapping, visibilityRules, filter, q, selectedNodeId) 
     const groupMatches = q && searchable.includes(q)
     const groupHasRule = hasVisibilityRule(node, visibilityRules)
     const mappedGroupMatches = filter === 'mapped' && groupHasRule && (!q || groupMatches)
-    const selectedChildren = filterTree(node.children ?? [], mapping, visibilityRules, filter, q, selectedNodeId)
-    const filteredChildren = groupMatches
-      ? (node.children ?? [])
-      : selectedChildren
+    const filteredChildren = filterTree(node.children ?? [], mapping, visibilityRules, filter, q)
 
-    if (isSelected || mappedGroupMatches || filteredChildren.length > 0 || (filter === 'all' && (!q || groupMatches))) {
+    if (mappedGroupMatches || filteredChildren.length > 0 || (filter === 'all' && (!q || groupMatches))) {
       acc.push({ ...node, children: filteredChildren })
     }
 
@@ -223,7 +239,10 @@ function LayerRow({ node, depth, expanded, onToggle, ancestorLast, isLast, regis
     <div ref={(el) => registerNode(node.nodeId, el)} className="relative">
       <BranchGuides depth={depth} ancestorLast={ancestorLast} isLast={isLast} />
       <div
-        onClick={() => selectNode(node.nodeId, node.editable ? node.rawId : null)}
+        onClick={() => selectNode(
+          node.nodeId,
+          node.rawId && (node.editable || node.elementType === 'image') ? node.rawId : null,
+        )}
         title={node.rawId || label}
         className="flex items-center gap-1.5 py-0.5 cursor-pointer select-none"
         style={{ paddingLeft: left, color: 'rgba(26,43,74,0.65)' }}
@@ -261,7 +280,9 @@ function LayerRow({ node, depth, expanded, onToggle, ancestorLast, isLast, regis
             style={{
               background: isMapped
                 ? 'rgb(34,197,94)'
-                : 'rgba(26,43,74,0.15)',
+                : node.elementType === 'image'
+                  ? 'var(--image)'
+                  : 'rgba(26,43,74,0.15)',
             }}
           />
 
@@ -274,13 +295,9 @@ function LayerRow({ node, depth, expanded, onToggle, ancestorLast, isLast, regis
 
           <span
             className="text-[10px] px-1.5 py-0.5 rounded-md font-mono font-semibold shrink-0"
-            style={
-              node.elementType === 'text'
-                ? { background: 'rgba(14,165,233,0.1)', color: 'rgba(14,165,233,0.8)' }
-                : { background: 'rgba(249,115,22,0.1)', color: 'rgba(234,88,12,0.8)' }
-            }
+            style={elementTypeBadgeStyle(node.elementType)}
           >
-            {node.elementType}
+            {node.elementType === 'image' ? 'image' : node.elementType}
           </span>
         </span>
       </div>
@@ -354,7 +371,7 @@ function TreeNodes({ nodes, depth, expanded, onToggle, registerNode, forceOpen, 
   })
 }
 
-export default function LayerList({ search = '', filter = 'all' }) {
+export default function LayerList({ search = '', filter = 'all', onFilterChange }) {
   const layerTree = useStore((s) => s.layerTree)
   const mapping = useStore((s) => s.mapping)
   const visibilityRules = useStore((s) => s.visibilityRules)
@@ -365,17 +382,22 @@ export default function LayerList({ search = '', filter = 'all' }) {
 
   const q = search.toLowerCase().trim()
   const forceOpen = q.length > 0
-  const selectedNode = useMemo(
-    () => selectedNodeId ? findNode(layerTree, selectedNodeId) : null,
-    [layerTree, selectedNodeId],
-  )
-  const selectedMapping = selectedNode?.rawId ? mapping[selectedNode.rawId] : null
-  const selectedIsMapped = selectedMapping?.source === 'csv' || selectedMapping?.source === 'manual' || hasVisibilityRule(selectedNode ?? {}, visibilityRules)
-  const revealedNodeId = q || (filter === 'mapped' && !selectedIsMapped) ? null : selectedNodeId
+  const filterRef = useRef(filter)
+  filterRef.current = filter
   const visible = useMemo(
-    () => filterTree(layerTree, mapping, visibilityRules, filter, q, revealedNodeId),
-    [layerTree, mapping, visibilityRules, filter, q, revealedNodeId],
+    () => filterTree(layerTree, mapping, visibilityRules, filter, q),
+    [layerTree, mapping, visibilityRules, filter, q],
   )
+
+  useLayoutEffect(() => {
+    if (!selectedNodeId || !onFilterChange) return
+
+    const node = findNode(layerTree, selectedNodeId)
+    if (!node || node.kind !== 'layer') return
+    if (layerMatches(node, mapping, visibilityRules, filterRef.current, q)) return
+
+    onFilterChange(filterForNode(node, mapping, visibilityRules))
+  }, [selectedNodeId, selectionTick, layerTree, mapping, visibilityRules, q, onFilterChange])
 
   useEffect(() => {
     if (!selectedNodeId) return
