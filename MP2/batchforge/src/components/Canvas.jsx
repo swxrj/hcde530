@@ -364,7 +364,7 @@ const VISIBILITY_TONE = {
   shadow: '0 8px 20px rgba(126,34,206,0.12)',
 }
 
-function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibilityRules, showMappingOverlay, csvRows, onSelect }) {
+function Overlays({ stageRef, svgWrapRef, displaySvg, nodes, selectedNodeId, mapping, visibilityRules, showMappingOverlay, csvRows, onSelect }) {
   const [rects, setRects] = useState([])
   const [hoveredId, setHoveredId] = useState(null)
 
@@ -409,12 +409,50 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
     setRects(next)
   }, [nodes, stageRef, svgWrapRef])
 
-  useLayoutEffect(() => { compute() }, [compute])
+  useLayoutEffect(() => { compute() }, [compute, displaySvg])
 
   useEffect(() => {
-    window.addEventListener('resize', compute)
-    return () => window.removeEventListener('resize', compute)
-  }, [compute])
+    const wrapper = svgWrapRef.current
+    const stageEl = stageRef.current
+    if (!wrapper || !stageEl) return
+
+    let cancelled = false
+    const remeasure = () => {
+      if (!cancelled) compute()
+    }
+
+    const ro = new ResizeObserver(remeasure)
+    ro.observe(stageEl)
+    ro.observe(wrapper)
+    const svgEl = wrapper.querySelector('svg')
+    if (svgEl) ro.observe(svgEl)
+
+    const imageEls = wrapper.querySelectorAll('image')
+    imageEls.forEach((el) => {
+      el.addEventListener('load', remeasure)
+      el.addEventListener('error', remeasure)
+    })
+
+    document.fonts?.ready?.then(remeasure)
+
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(remeasure)
+    })
+
+    window.addEventListener('resize', remeasure)
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+      ro.disconnect()
+      window.removeEventListener('resize', remeasure)
+      imageEls.forEach((el) => {
+        el.removeEventListener('load', remeasure)
+        el.removeEventListener('error', remeasure)
+      })
+    }
+  }, [compute, displaySvg, stageRef, svgWrapRef])
 
   if (rects.length === 0) return null
 
@@ -705,6 +743,7 @@ export default function Canvas() {
         <Overlays
           stageRef={stageRef}
           svgWrapRef={svgWrapRef}
+          displaySvg={displaySvg}
           nodes={nodes}
           selectedNodeId={selectedNodeId}
           mapping={mapping}
