@@ -34,12 +34,15 @@ function uniqueColumnValues(csvRows, column) {
 }
 
 function ConditionValueInput({ operator, column, value, csvRows, onChange }) {
+  const needsValue = VALUE_OPERATORS.has(operator)
   const options = useMemo(
-    () => (operator === 'equals' ? uniqueColumnValues(csvRows, column) : []),
-    [operator, column, csvRows],
+    () => (needsValue ? uniqueColumnValues(csvRows, column) : []),
+    [needsValue, column, csvRows],
   )
 
-  if (operator === 'equals' && options.length > 0) {
+  if (!needsValue) return null
+
+  if (options.length > 0) {
     return (
       <div className="flex min-w-0 gap-1">
         <input
@@ -76,7 +79,7 @@ function ConditionValueInput({ operator, column, value, csvRows, onChange }) {
       type="text"
       className="bf-input w-full h-9 px-3 text-sm"
       value={value ?? ''}
-      placeholder="Value"
+      placeholder="Type value"
       onChange={(e) => onChange(e.target.value)}
     />
   )
