@@ -22,6 +22,15 @@ export function defaultVisibilityRule() {
   }
 }
 
+export function isActiveVisibilityRule(rule) {
+  if (!rule || rule.mode === 'always') return false
+  if (rule.mode === 'hidden') return true
+  if (rule.mode === 'conditional') {
+    return Boolean(rule.conditions?.some((condition) => String(condition.column ?? '').trim()))
+  }
+  return false
+}
+
 function isEmpty(value) {
   return value === undefined || value === null || String(value).trim() === ''
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useStore } from '../store/useStore'
-import { defaultVisibilityRule } from '../lib/visibilityRules'
+import { defaultVisibilityRule, isActiveVisibilityRule } from '../lib/visibilityRules'
 
 const OPERATOR_LABELS = {
   is_empty: 'is empty',
@@ -263,7 +263,7 @@ function VisibilitySection({ rawId }) {
   const conditions = rule.conditions?.length ? rule.conditions : defaultVisibilityRule().conditions
   const savedConditions = savedRule.conditions?.length ? savedRule.conditions : defaultVisibilityRule().conditions
   const savedSignatures = new Set(
-    savedRule.mode === 'conditional'
+    isActiveVisibilityRule(savedRule)
       ? savedConditions.map((condition) => JSON.stringify(condition))
       : [],
   )
@@ -276,8 +276,16 @@ function VisibilitySection({ rawId }) {
       clearVisibilityRule(rawId)
     } else if (next.mode === 'hidden') {
       setVisibilityRule(rawId, next)
-    } else if (next.mode === 'conditional') {
-      setVisibilityRule(rawId, { ...next, conditions })
+    }
+  }
+
+  const commitConditionalRule = (nextConditions) => {
+    const nextRule = { ...rule, mode: 'conditional', conditions: nextConditions }
+    setDraftRule(nextRule)
+    if (isActiveVisibilityRule(nextRule)) {
+      setVisibilityRule(rawId, nextRule)
+    } else {
+      clearVisibilityRule(rawId)
     }
   }
 
@@ -299,24 +307,21 @@ function VisibilitySection({ rawId }) {
 
   const removeCondition = (index) => {
     const nextConditions = conditions.filter((_, i) => i !== index)
-    setDraftRule({
-      ...rule,
-      mode: 'conditional',
-      conditions: nextConditions.length
-        ? nextConditions
-        : [{ column: '', operator: 'is_not_empty', value: '' }],
-    })
+    if (nextConditions.length === 0) {
+      clearVisibilityRule(rawId)
+      setDraftRule(defaultVisibilityRule())
+      return
+    }
+    commitConditionalRule(nextConditions)
   }
 
   const saveRule = () => {
     if ((rule.mode ?? 'always') === 'always') {
       clearVisibilityRule(rawId)
+    } else if (isActiveVisibilityRule({ ...rule, conditions })) {
+      setVisibilityRule(rawId, { ...rule, conditions })
     } else {
-      const nextRule = {
-        ...rule,
-        conditions,
-      }
-      setVisibilityRule(rawId, nextRule)
+      clearVisibilityRule(rawId)
     }
   }
 

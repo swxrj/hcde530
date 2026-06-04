@@ -2,6 +2,7 @@ import { useRef, useLayoutEffect, useState, useCallback, useEffect, useMemo } fr
 import { motion } from 'motion/react'
 import { useStore } from '../store/useStore'
 import EmptyState from './EmptyState'
+import { isActiveVisibilityRule } from '../lib/visibilityRules'
 
 function flattenNodes(nodes) {
   return nodes.flatMap((node) => [node, ...flattenNodes(node.children ?? [])])
@@ -122,26 +123,109 @@ function MappingSegment({ label, tone, leadingGradient = null, onSelect }) {
   )
 }
 
+function layoutMappingPills(rect, lane, groupWidth, labelHeight) {
+  const gap = 20
+  const pad = 16
+  const svgLeft = rect.svgLeft
+  const svgTop = rect.svgTop
+  const svgRight = rect.svgRight
+  const svgBottom = rect.svgBottom
+
+  const anchorY = lane === 0
+    ? rect.y + Math.min(28, Math.max(8, rect.h * 0.38))
+    : rect.y + Math.max(8, Math.min(rect.h - 8, rect.h * 0.72))
+  const laneShift = lane * (labelHeight + 12)
+
+  const clampTop = (top) => Math.max(
+    rect.stageTop + pad,
+    Math.min(top + laneShift, rect.stageBottom - labelHeight - pad),
+  )
+
+  const rightLeft = svgRight + gap
+  if (rightLeft + groupWidth <= rect.stageRight - pad) {
+    const labelTop = clampTop(anchorY - labelHeight / 2)
+    const fromX = Math.min(rect.x + rect.w + 6, svgRight - 4)
+    const toX = rightLeft
+    const toY = labelTop + labelHeight / 2
+    const bend = Math.max(18, Math.min(48, Math.abs(toX - fromX) * 0.45))
+    return {
+      labelLeft: rightLeft,
+      labelTop,
+      fromX,
+      fromY: anchorY,
+      toX,
+      toY,
+      path: `M ${fromX} ${anchorY} C ${fromX + bend} ${anchorY}, ${toX - bend} ${toY}, ${toX} ${toY}`,
+    }
+  }
+
+  const leftLeft = svgLeft - groupWidth - gap
+  if (leftLeft >= rect.stageLeft + pad) {
+    const labelTop = clampTop(anchorY - labelHeight / 2)
+    const fromX = Math.max(rect.x - 6, svgLeft + 4)
+    const toX = leftLeft + groupWidth
+    const toY = labelTop + labelHeight / 2
+    const bend = Math.max(18, Math.min(48, Math.abs(toX - fromX) * 0.45))
+    return {
+      labelLeft: leftLeft,
+      labelTop,
+      fromX,
+      fromY: anchorY,
+      toX,
+      toY,
+      path: `M ${fromX} ${anchorY} C ${fromX - bend} ${anchorY}, ${toX + bend} ${toY}, ${toX} ${toY}`,
+    }
+  }
+
+  const belowTop = svgBottom + gap + laneShift
+  if (belowTop + labelHeight <= rect.stageBottom - pad) {
+    const labelLeft = Math.max(
+      rect.stageLeft + pad,
+      Math.min(rect.x + rect.w / 2 - groupWidth / 2, rect.stageRight - groupWidth - pad),
+    )
+    const fromX = Math.max(svgLeft + 8, Math.min(rect.x + rect.w / 2, svgRight - 8))
+    const fromY = Math.min(rect.y + rect.h + 6, svgBottom - 4)
+    const toX = labelLeft + groupWidth / 2
+    const toY = belowTop
+    const bend = Math.max(18, Math.min(48, Math.abs(toY - fromY) * 0.45))
+    return {
+      labelLeft,
+      labelTop: belowTop,
+      fromX,
+      fromY,
+      toX,
+      toY,
+      path: `M ${fromX} ${fromY} C ${fromX} ${fromY + bend}, ${toX} ${toY - bend}, ${toX} ${toY}`,
+    }
+  }
+
+  const aboveTop = svgTop - labelHeight - gap - laneShift
+  const labelLeft = Math.max(
+    rect.stageLeft + pad,
+    Math.min(rect.x + rect.w / 2 - groupWidth / 2, rect.stageRight - groupWidth - pad),
+  )
+  const labelTop = Math.max(rect.stageTop + pad, aboveTop)
+  const fromX = Math.max(svgLeft + 8, Math.min(rect.x + rect.w / 2, svgRight - 8))
+  const fromY = Math.max(rect.y - 6, svgTop + 4)
+  const toX = labelLeft + groupWidth / 2
+  const toY = labelTop + labelHeight
+  const bend = Math.max(18, Math.min(48, Math.abs(fromY - toY) * 0.45))
+  return {
+    labelLeft,
+    labelTop,
+    fromX,
+    fromY,
+    toX,
+    toY,
+    path: `M ${fromX} ${fromY} C ${fromX} ${fromY - bend}, ${toX} ${toY + bend}, ${toX} ${toY}`,
+  }
+}
+
 function LinkedMappingGroup({ rect, lane, items, connectorTone, onSelect }) {
   const labelHeight = 32
   const groupWidth = estimateItemsWidth(items)
-  const desiredLeft = rect.x + rect.w + 28
-  const canPlaceRight = desiredLeft + groupWidth <= rect.stageRight - 16
-  const labelLeft = canPlaceRight
-    ? desiredLeft
-    : Math.max(rect.stageLeft + 16, rect.x - groupWidth - 28)
-  const preferredTop = lane === 0 ? rect.y - 18 : rect.y + rect.h + 10 + (lane - 1) * 44
-  const labelTop = Math.max(rect.stageTop + 16, Math.min(preferredTop, rect.stageBottom - labelHeight - 16))
-  const fromX = canPlaceRight ? rect.x + rect.w + 6 : rect.x - 6
-  const fromY = lane === 0
-    ? rect.y + Math.min(28, Math.max(8, rect.h * 0.38))
-    : rect.y + Math.max(8, Math.min(rect.h - 8, rect.h * 0.72))
-  const toX = canPlaceRight ? labelLeft : labelLeft + groupWidth
-  const toY = labelTop + labelHeight / 2
-  const bend = Math.max(18, Math.min(48, Math.abs(toX - fromX) * 0.45))
-  const c1X = canPlaceRight ? fromX + bend : fromX - bend
-  const c2X = canPlaceRight ? toX - bend : toX + bend
-  const path = `M ${fromX} ${fromY} C ${c1X} ${fromY}, ${c2X} ${toY}, ${toX} ${toY}`
+  const layout = layoutMappingPills(rect, lane, groupWidth, labelHeight)
+  const { labelLeft, labelTop, fromX, fromY, path } = layout
 
   return (
     <>
@@ -290,6 +374,11 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
     if (!wrapper || !stageEl || nodes.length === 0) { setRects([]); return }
 
     const stageBr = stageEl.getBoundingClientRect()
+    const wrapBr = wrapper.getBoundingClientRect()
+    const svgLeft = wrapBr.left - stageBr.left
+    const svgTop = wrapBr.top - stageBr.top
+    const svgRight = wrapBr.right - stageBr.left
+    const svgBottom = wrapBr.bottom - stageBr.top
 
     const next = []
     for (const node of nodes) {
@@ -307,6 +396,10 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
         y: bbox.top - stageBr.top,
         w: bbox.width,
         h: bbox.height,
+        svgLeft,
+        svgTop,
+        svgRight,
+        svgBottom,
         stageLeft: 0,
         stageRight: stageBr.width,
         stageTop: 0,
@@ -341,7 +434,7 @@ function Overlays({ stageRef, svgWrapRef, nodes, selectedNodeId, mapping, visibi
                 ? `color: ${mappedColorManual}`
                 : null
             const rule = r.rawId ? visibilityRules[r.rawId] : null
-            const hasRule = rule && rule.mode !== 'always'
+            const hasRule = isActiveVisibilityRule(rule)
             if (!mappedColumn && !hasColorMap && !hasRule) return null
 
             const valueItems = buildValueMappingItems(mappedColumn, colorLabel, csvRows, m)

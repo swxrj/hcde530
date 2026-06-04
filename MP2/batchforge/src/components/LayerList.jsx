@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
+import { isActiveVisibilityRule } from '../lib/visibilityRules'
 
 const INDENT = 12
 const ROW_BASE_LEFT = 9
@@ -21,7 +22,7 @@ function nodeNameMatches(node, q) {
 
 function hasVisibilityRule(node, visibilityRules) {
   const rule = node.rawId ? visibilityRules[node.rawId] : null
-  return Boolean(rule && rule.mode !== 'always')
+  return isActiveVisibilityRule(rule)
 }
 
 function elementTypeBadgeStyle(elementType) {
