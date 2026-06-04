@@ -18,6 +18,70 @@ const OPERATOR_LABELS = {
 
 const VALUE_OPERATORS = new Set(['equals', 'not_equals', 'contains', 'not_contains', 'gt', 'gte', 'lt', 'lte'])
 
+function uniqueColumnValues(csvRows, column) {
+  if (!column) return []
+
+  const seen = new Set()
+  const values = []
+  for (const row of csvRows) {
+    const value = String(row[column] ?? '').trim()
+    if (!value || seen.has(value)) continue
+    seen.add(value)
+    values.push(value)
+  }
+
+  return values.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+}
+
+function ConditionValueInput({ operator, column, value, csvRows, onChange }) {
+  const options = useMemo(
+    () => (operator === 'equals' ? uniqueColumnValues(csvRows, column) : []),
+    [operator, column, csvRows],
+  )
+
+  if (operator === 'equals' && options.length > 0) {
+    return (
+      <div className="flex min-w-0 gap-1">
+        <input
+          type="text"
+          className="bf-input min-w-0 flex-1 h-9 px-3 text-sm"
+          value={value ?? ''}
+          placeholder="Type value"
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <select
+          className="bf-input bf-select h-9 w-9 shrink-0 cursor-pointer px-1"
+          value=""
+          aria-label="Pick value from column"
+          onChange={(e) => {
+            const nextValue = e.target.value
+            if (nextValue) onChange(nextValue)
+          }}
+        >
+          <option value="" disabled hidden>
+            …
+          </option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
+    )
+  }
+
+  return (
+    <input
+      type="text"
+      className="bf-input w-full h-9 px-3 text-sm"
+      value={value ?? ''}
+      placeholder="Value"
+      onChange={(e) => onChange(e.target.value)}
+    />
+  )
+}
+
 const ALIGN_OPTIONS = [
   {
     id: 'left',
@@ -179,6 +243,7 @@ function ColorInput({ value, onChange }) {
 
 function VisibilitySection({ rawId }) {
   const csvHeaders = useStore((s) => s.csvHeaders)
+  const csvRows = useStore((s) => s.csvRows)
   const visibilityRules = useStore((s) => s.visibilityRules)
   const setVisibilityRule = useStore((s) => s.setVisibilityRule)
   const clearVisibilityRule = useStore((s) => s.clearVisibilityRule)
@@ -308,7 +373,7 @@ function VisibilitySection({ rawId }) {
                       <option key={h} value={h}>{h}</option>
                     ))}
                   </select>
-                  <div className="grid grid-cols-[1fr_72px] gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <select
                       className="bf-input bf-select w-full h-9 pl-3 text-sm cursor-pointer"
                       value={condition.operator}
@@ -319,12 +384,12 @@ function VisibilitySection({ rawId }) {
                       ))}
                     </select>
                     {needsValue ? (
-                      <input
-                        type="text"
-                        className="bf-input w-full h-9 px-3 text-sm"
+                      <ConditionValueInput
+                        operator={condition.operator}
+                        column={condition.column}
                         value={condition.value ?? ''}
-                        placeholder="Value"
-                        onChange={(e) => updateCondition(index, { value: e.target.value })}
+                        csvRows={csvRows}
+                        onChange={(nextValue) => updateCondition(index, { value: nextValue })}
                       />
                     ) : (
                       <div />

@@ -7,7 +7,6 @@ export default function CsvPreviewModal() {
   const rows = useStore((s) => s.csvRows)
   const selectedColumn = useStore((s) => s.selectedCsvColumn)
   const selectColumn = useStore((s) => s.selectCsvColumn)
-  const previewRows = rows.slice(0, 50)
 
   if (!open || headers.length === 0) return null
 
@@ -34,7 +33,7 @@ export default function CsvPreviewModal() {
               CSV preview
             </h2>
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-35)' }}>
-              Showing first {previewRows.length} of {rows.length.toLocaleString()} rows · {headers.length.toLocaleString()} columns
+              {rows.length.toLocaleString()} rows · {headers.length.toLocaleString()} columns · scroll to browse all data
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -88,7 +87,7 @@ export default function CsvPreviewModal() {
               </tr>
             </thead>
             <tbody>
-              {previewRows.map((row, rowIndex) => (
+              {rows.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                   <td
                     className="sticky left-0 z-10 px-3 py-2 font-mono"
