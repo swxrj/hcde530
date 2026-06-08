@@ -19,6 +19,12 @@ Typical use case: badges, certificates, labels, or any repeatable graphic where 
 
 ---
 
+## Try the demo
+
+The live app includes a **Try demo** flow: one click loads the Helix Relay Summit event pass (`public/demo/helix-pass.svg`) and a 100-row guest list (`public/demo/helix-variants.csv`). Preset mappings, a VIP visibility rule, and center alignment are applied in `demoConfig.js`. `DemoGuide.jsx` runs a 17-step tour (driver.js spotlights) covering search, filters, canvas selection, text/color mapping, alignment, visibility, and export. See `batchforge/README.md` for the public-facing summary.
+
+---
+
 ## Architecture overview
 
 ```mermaid

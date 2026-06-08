@@ -725,6 +725,7 @@ export default function Canvas() {
     <div
       ref={stageRef}
       className="relative flex-1 flex items-center justify-center p-12 overflow-hidden min-h-0"
+      data-bf-demo="canvas-stage"
       onClick={handleStageClick}
     >
       {!generation.running && Object.values(mapping).some((m) => m.source === 'csv' || m.colorSource === 'csv') && (

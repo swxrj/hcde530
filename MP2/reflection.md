@@ -10,7 +10,7 @@ The core problem is manual load. Any job that needs many versions of the same la
 
 It is not limited to swapping one name field. Visibility rules, conditional layers, per-row colors, and text alignment mean each row can produce a **specific** variant, not a cookie-cutter repeat. One row can show a VIP badge layout, another can hide a layer entirely, another can change title color. That is what makes it useful for real production work, not just simple mail merge.
 
-The interface has three main areas: a **sidebar** for uploads, the layer tree, and CSV preview; a **canvas** where you see the design, select layers, and toggle the mapping guide; and a **properties panel** where you map columns, set colors, alignment, and visibility rules for the selected layer. A **Try demo** button loads a sample badge and CSV and walks new users through the workflow without uploading anything.
+The interface has three main areas: a **sidebar** for uploads, layer search and filters, the layer tree, and CSV preview; a **canvas** where you see the design, click layers or mapping tags, and toggle the mapping guide; and a **properties panel** where you map columns, set colors, alignment, and visibility rules for the selected layer. A **Try demo** button loads a Helix Relay Summit event pass, a 100-row guest-list CSV, and a 17-step guided tour so new users can explore every main feature without uploading anything.
 
 Everything runs client-side. Files stay on the user's machine unless they export. There is no server storing uploads.
 
@@ -26,7 +26,7 @@ Everything runs client-side. Files stay on the user's machine unless they export
 
 **Conditionals over flat repeats.** Early versions only swapped text. I added visibility rules in `visibilityRules.js` and the rule builder in `RightPanel.jsx` because real batches need different layouts per row, not just different words. Color columns like `role__fill` let each row change styling without a separate template file.
 
-**Deploy: GitHub Pages + demo tour.** I wanted a public URL reviewers and collaborators could open without cloning the repo. GitHub Actions builds and deploys on push to `main`. The demo tour in `DemoGuide.jsx` lowers the barrier for first-time users who do not have their own SVG ready.
+**Deploy: GitHub Pages + demo tour.** I wanted a public URL reviewers and collaborators could open without cloning the repo. GitHub Actions builds and deploys on push to `main`. The demo tour in `DemoGuide.jsx` and preset config in `demoConfig.js` walk users through search, filters, canvas selection, text/color mapping, alignment, visibility rules, and export on a real 100-person event pass.
 
 **What I chose not to build:** user accounts, cloud storage, and a Figma plugin. Those would help teams but were out of scope for MP2. I prioritized a complete single-user flow that ships and runs today.
 
@@ -58,7 +58,7 @@ The mapping guide on `Canvas.jsx` connects layers to CSV columns visually. `CsvP
 Several first-pass features failed in real use. Mapping pills misaligned on load until `ResizeObserver` and font-load hooks in `Canvas.jsx` (`5ce9878`). Visibility showed Saved too early until draft edits in `RightPanel.jsx` stopped syncing on every keystroke (`6373f8a`). Figma rasters were missed until `svgParser.js` handled pattern fills (`8e4a566`). The live URL 404'd until GitHub Pages pointed at `gh-pages`.
 
 **C8 — Building and deploying a complete tool**  
-BatchForge runs end to end: SVG + CSV in, ZIP out, at https://swxrj.github.io/hcde530/batchforge/. `.github/workflows/deploy-batchforge.yml` deploys on push to `main`. `DemoGuide.jsx` and bundled demo files onboard new users. Preview, mapping review, and export formats (SVG, PNG, PDF) are all in the shipped product.
+BatchForge runs end to end: SVG + CSV in, ZIP out, at https://swxrj.github.io/hcde530/batchforge/. `.github/workflows/deploy-batchforge.yml` deploys on push to `main`. `DemoGuide.jsx`, `demoConfig.js`, and bundled assets in `public/demo/` (`helix-pass.svg`, `helix-variants.csv`) onboard new users with a click-by-click tour. Preview, mapping review, and export formats (SVG, PNG, PDF) are all in the shipped product.
 
 ---
 

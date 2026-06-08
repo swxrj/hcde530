@@ -119,13 +119,13 @@ That version was functional but rough. From there I treated MP2 as an iterative 
 
 - GitHub Actions workflow (`.github/workflows/deploy-batchforge.yml`)
 - Vite production base path `/hcde530/batchforge/` (`vite.config.js`)
-- Bundled demo assets (`public/demo/badge.svg`, `public/demo/variants.csv`)
-- **Try demo** button and guided tour (`DemoGuide.jsx`, `loadDemo()` in `useStore.js`)
+- Bundled demo assets (`public/demo/helix-pass.svg`, `public/demo/helix-variants.csv` — 100 unique guests)
+- **Try demo** button, preset mappings/visibility in `demoConfig.js`, and a 17-step guided tour (`DemoGuide.jsx`, `loadDemo()` in `useStore.js`)
 - README written for someone who was not in the class
 
 **Challenge:** GitHub Pages serves static files from the `gh-pages` branch, but the repo default Pages source was still pointed at `main`. The site returned 404 until Pages was switched to `gh-pages` and a rebuild ran.
 
-**Why Try demo:** Upload friction kills first impressions. One click loads sample files and walks through mapping, visibility, CSV preview, and batch preview so a new user can evaluate the tool in under two minutes.
+**Why Try demo:** Upload friction kills first impressions. One click loads a complex event-pass template and 100-row spreadsheet, with mappings and a VIP visibility rule already configured. The tour explains each feature in plain language and points to exactly where to click.
 
 ---
 
@@ -270,7 +270,7 @@ MP2 asked for a usable HCD tool, not a code demo. BatchForge is meant to be open
 
 The full loop works today: input is an SVG template plus CSV (or bundled demo files), output is a ZIP of SVG/PNG/PDF variants with configurable filenames using `{{column}}` and `{{row}}` templates in `Header.jsx`. The app is live at https://swxrj.github.io/hcde530/batchforge/ and deploys automatically when `main` updates via `.github/workflows/deploy-batchforge.yml`.
 
-Onboarding was part of "complete," not an afterthought. `DemoGuide.jsx` walks new users through mapping review, the mapping guide, layer selection, visibility rules, CSV preview, and batch preview. `loadDemo()` in `useStore.js` loads bundled assets from `public/demo/` with no upload step.
+Onboarding was part of "complete," not an afterthought. `DemoGuide.jsx` runs a 17-step tour: layer search and filters, canvas and list selection, text and color mapping, alignment, conditional visibility (with preset VIP backdrop rule), CSV preview, and export. `loadDemo()` in `useStore.js` loads `helix-pass.svg` and `helix-variants.csv` from `public/demo/` with no upload step.
 
 I also scoped honestly. Preview is capped at 50 rows so the UI stays responsive; full export runs on download. There are no user accounts or cloud storage, which kept deploy simple and kept uploaded files on the user's machine.
 
@@ -279,7 +279,7 @@ I also scoped honestly. Preview is capped at 50 rows so the UI stays responsive;
 - **Live URL:** https://swxrj.github.io/hcde530/batchforge/
 - **Input/output loop:** upload or demo → map → preview → export (`useStore.js`, `generator.js`, `export.js`)
 - **Deploy pipeline:** `.github/workflows/deploy-batchforge.yml` → `gh-pages/batchforge/`
-- **Onboarding:** `DemoGuide.jsx`, `public/demo/badge.svg`, `public/demo/variants.csv`
+- **Onboarding:** `DemoGuide.jsx`, `demoConfig.js`, `public/demo/helix-pass.svg`, `public/demo/helix-variants.csv`
 - **Public docs:** `batchforge/README.md` for outside readers
 - **Iteration history:** commits under `MP2/batchforge/` on `main`
 
@@ -304,9 +304,9 @@ I also scoped honestly. Preview is capped at 50 rows so the UI stays responsive;
 ## How to verify these claims
 
 1. Open the live app and click **Try demo**.
-2. Walk the tour: mapping review → mapping guide → layer select → visibility rule → CSV preview → Preview.
+2. Walk the tour: search and filters → canvas tags → text, color, and alignment mapping → VIP visibility rule → CSV preview (100 rows) → Generate → Download.
 3. Clone the repo, `cd MP2/batchforge && npm install && npm run dev`, and upload your own SVG + CSV.
-4. Read `batchforge.md` for architecture and follow commits on `main` under `MP2/batchforge/` for iteration history.
+4. Read `batchforge/README.md` and `batchforge.md` for architecture; follow commits on `main` under `MP2/batchforge/` for iteration history.
 
 ---
 

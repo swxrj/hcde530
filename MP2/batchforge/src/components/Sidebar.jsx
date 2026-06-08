@@ -505,6 +505,7 @@ export default function Sidebar() {
                 placeholder="Search layers…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                data-bf-demo="layer-search"
               />
             </div>
 

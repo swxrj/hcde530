@@ -17,6 +17,7 @@ import {
   runDemoStepEnter,
   runDemoStepLeave,
   DEMO_STEPS,
+  demoAssetUrl,
 } from '../lib/demoConfig'
 
 let cancelFlag = false
@@ -174,8 +175,8 @@ export const useStore = create((set, get) => ({
     const base = import.meta.env.BASE_URL
     try {
       const [svgRes, csvRes] = await Promise.all([
-        fetch(`${base}${DEMO_SVG}`),
-        fetch(`${base}${DEMO_CSV}`),
+        fetch(demoAssetUrl(base, DEMO_SVG), { cache: 'no-store' }),
+        fetch(demoAssetUrl(base, DEMO_CSV), { cache: 'no-store' }),
       ])
       if (!svgRes.ok || !csvRes.ok) {
         throw new Error('Demo files not found')
@@ -221,7 +222,7 @@ export const useStore = create((set, get) => ({
       get().selectLayer(presets.focusLayer)
       runDemoStepEnter(0, get, set)
 
-      get().pushToast({ kind: 'success', text: 'Helix Relay demo loaded — follow the guide.' })
+      get().pushToast({ kind: 'success', text: `Demo loaded — ${rows.length} guest rows. Follow the guide.` })
     } catch (e) {
       get().pushToast({ kind: 'error', text: `Demo failed: ${e.message}` })
     }

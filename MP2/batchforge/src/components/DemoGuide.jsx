@@ -112,7 +112,7 @@ export default function DemoGuide() {
       </div>
 
       {!isFinish && (
-        <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto" data-bf-demo="demo-tour-steps">
+        <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto" data-bf-demo="demo-tour-steps">
           {DEMO_STEPS.slice(0, -1).map((step, index) => {
             const done = index < stepIndex
             const current = index === stepIndex

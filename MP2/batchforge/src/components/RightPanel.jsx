@@ -125,7 +125,7 @@ function TextAlignmentToolbar({ layer }) {
   const isCustom = Boolean(override)
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2.5" data-bf-demo="text-alignment">
       <div className="flex items-center justify-between gap-2">
         <label
           className="text-[11px] font-bold uppercase tracking-widest"
@@ -464,7 +464,7 @@ function TextColorSection({ layer }) {
   const totalColors = m.colorSource === 'csv' && m.colorColumn ? csvRows.length : 0
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2.5" data-bf-demo="text-color">
       <label
         className="text-[11px] font-bold uppercase tracking-widest"
         style={{ color: 'var(--ink-35)' }}
@@ -643,7 +643,7 @@ function LayerDetail({ layer }) {
 
       {/* CSV column mapping */}
       {csvHeaders.length > 0 && (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5" data-bf-demo="map-text-column">
           <label
             className="text-[11px] font-bold uppercase tracking-widest"
             style={{ color: 'var(--ink-35)' }}

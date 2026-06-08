@@ -15,9 +15,9 @@ The demo uses a **Helix Relay Summit** event pass (a sci-fi badge design with na
 - Show/hide rules (for example, a VIP-only background)
 - Preview and export as SVG, PNG, or PDF
 
-A **guided tour** walks you through step by step — each step tells you exactly where to click and what to look for, in plain language. Follow the numbered list and click **Next**. When you are done, keep exploring the sample or use **Clear** in the top bar to start with your own files.
+A **guided tour** (17 steps) walks through every main feature — search, filters, canvas clicks, text mapping, color, alignment, visibility rules, and export — with “click here” instructions plus how each feature applies to this pass.
 
-Demo assets live in [`public/demo/`](public/demo/) (`helix-pass.svg` and `helix-variants.csv`) if you want to inspect or reuse them locally.
+Demo assets live in [`public/demo/`](public/demo/) (`helix-pass.svg` and `helix-variants.csv`) if you want to inspect or reuse them locally. After a deploy, hard-refresh the page if the Data card still shows an old row count — demo files are cache-busted on load.
 
 ## Who this is for
 
