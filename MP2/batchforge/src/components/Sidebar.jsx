@@ -161,6 +161,7 @@ function FilterBar({ filter, onSelect, pillInstantRef }) {
     <div
       ref={containerRef}
       className="relative flex items-center justify-between gap-2 rounded-xl px-2 py-2"
+      data-bf-demo="layer-filters"
       style={{
         background: 'rgba(26,43,74,0.06)',
         boxShadow: 'inset 0 2px 5px rgba(26,43,74,0.08), inset 0 1px 2px rgba(26,43,74,0.04)',

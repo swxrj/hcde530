@@ -3,7 +3,7 @@ import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { motion } from 'motion/react'
 import { useStore } from '../store/useStore'
-import { DEMO_STEPS } from '../lib/demoConfig'
+import { DEMO_STEPS, demoStepPopoverText } from '../lib/demoConfig'
 
 export default function DemoGuide() {
   const demo = useStore((s) => s.demo)
@@ -57,8 +57,8 @@ export default function DemoGuide() {
       element: target,
       popover: {
         title: currentStep.title,
-        description: currentStep.hint,
-        side: 'bottom',
+        description: demoStepPopoverText(currentStep),
+        side: currentStep.spotlightSide ?? 'bottom',
         align: 'start',
       },
     })
@@ -88,9 +88,16 @@ export default function DemoGuide() {
           <p className="text-[13px] font-semibold mt-0.5" style={{ color: 'var(--ink)' }}>
             {currentStep.title}
           </p>
-          <p className="text-[11px] leading-snug mt-1" style={{ color: 'var(--ink-60)' }}>
-            {currentStep.hint}
-          </p>
+          {currentStep.action && (
+            <p className="text-[12px] font-semibold leading-snug mt-1.5" style={{ color: 'var(--ink)' }}>
+              {currentStep.action}
+            </p>
+          )}
+          {currentStep.hint && (
+            <p className="text-[11px] leading-snug mt-1" style={{ color: 'var(--ink-60)' }}>
+              {currentStep.hint}
+            </p>
+          )}
         </div>
         {!isFinish && (
           <button
@@ -105,7 +112,7 @@ export default function DemoGuide() {
       </div>
 
       {!isFinish && (
-        <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto" data-bf-demo="demo-tour-steps">
+        <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto" data-bf-demo="demo-tour-steps">
           {DEMO_STEPS.slice(0, -1).map((step, index) => {
             const done = index < stepIndex
             const current = index === stepIndex

@@ -14,74 +14,107 @@ const FOCUS_LAYER = 'role'
 export const DEMO_STEPS = [
   {
     id: 'welcome',
-    title: 'Welcome',
-    hint: 'Follow the numbered steps in this list and click Next to walk through BatchForge one feature at a time.',
-    spotlight: '[data-bf-demo="demo-guide-panel"]',
+    title: 'Start here',
+    action: 'Click Next at the bottom of this blue panel.',
+    hint: 'This tour loads a sample event pass and a spreadsheet with 100 unique guests. Each row becomes one finished pass — like printing 100 badges from one template.',
+    spotlight: '[data-bf-demo="demo-next"]',
+  },
+  {
+    id: 'loaded',
+    title: 'Design + data loaded',
+    action: 'Look at the left sidebar — Design and Data both show green checkmarks.',
+    hint: 'In general, BatchForge needs two things: your artwork file and a spreadsheet with one row per person. This demo already has both — the Helix Relay Summit pass and a 100-person guest list.',
+    spotlight: '[data-bf-demo="upload-design"]',
   },
   {
     id: 'overlay',
-    title: 'What changes?',
-    hint: 'Colored tags on the design mark parts that swap out per row. Turn this view on or off with the button on the canvas.',
+    title: 'Tags on the canvas',
+    action: 'Click the round eye button on the canvas (lower-right corner).',
+    hint: 'In general, colored tags show which parts of the design change per spreadsheet row. On this pass, tags appear on the name, job title, header colors, and more.',
     spotlight: '[aria-label="Toggle mapping view"]',
     onEnter: (_get, set) => set({ showMappingOverlay: true }),
   },
   {
     id: 'layers',
-    title: 'Parts of the design',
-    hint: 'Layers are like stacked pieces of the artwork — the name, colors, backgrounds, and so on. This list shows every piece you can connect to the spreadsheet.',
+    title: 'The layer list',
+    action: 'Click any name in this list — try “name” or “role”.',
+    hint: 'In general, layers are the individual pieces of your design (text, shapes, backgrounds). Each row is something you can click to inspect or connect to the spreadsheet. On this pass, you will see the attendee name, job title, ID number, header colors, and the VIP backdrop.',
     spotlight: '[data-bf-demo="layer-tree"]',
   },
   {
+    id: 'filters',
+    title: 'Filter the list',
+    action: 'Click the icon buttons above the list — try Text, then Mapped.',
+    hint: 'In general, filters help you focus. Text shows wording layers, Color shows fill layers, Mapped shows only pieces already linked to the spreadsheet, and Image shows photos.',
+    spotlight: '[data-bf-demo="layer-filters"]',
+  },
+  {
+    id: 'name',
+    title: 'Swap the name',
+    action: 'With “name” selected, look at the right panel — it is linked to the name column.',
+    hint: 'In general, mapping means “pull this text from this spreadsheet column.” On this pass, the guest name at the center updates for all 100 rows (ARI VALE, NOVA CHEN, and so on).',
+    spotlight: '[data-bf-demo="layer-mapping"]',
+    onEnter: (get) => get().selectLayer('name'),
+  },
+  {
     id: 'role',
-    title: 'Connecting data to the design',
-    hint: 'Mapping means “this part of the design reads from this spreadsheet cell.” The big job title pulls the words from one field and the color from another.',
+    title: 'Swap title + color',
+    action: 'Click “role” in the layer list if it is not already selected.',
+    hint: 'In general, one piece can read words from one column and color from another. On this pass, the large job title (SECURITY, VIP, VOIDSMITH…) uses the role column for text and rolecolor for its fill — that is why each job type looks different.',
     spotlight: '[data-bf-demo="layer-mapping"]',
     onEnter: (get) => get().selectLayer(FOCUS_LAYER),
   },
   {
     id: 'vip',
-    title: 'Show or hide by row',
-    hint: 'A condition is a simple rule: only show this piece when a spreadsheet value matches. Here, the gold VIP background appears only when the job type is VIP — other rows skip it.',
+    title: 'Show or hide a backdrop',
+    action: 'Read the Visibility section on the right — the rule is already set for you.',
+    hint: 'In general, you can hide or show a design piece based on spreadsheet values. On this pass, the gold VIP background only appears when the guest’s role is VIP. Security, staff, and other roles keep the standard dark backdrop.',
     spotlight: '[data-bf-demo="visibility-panel"]',
     onEnter: (get) => get().selectLayer('bck_vip'),
   },
   {
     id: 'csv',
-    title: 'The spreadsheet',
-    hint: 'Each row is one person (or one version). Open the table to see all six — compare a VIP row with a non-VIP row to see how the background rule changes things.',
+    title: 'The guest list',
+    action: 'Browse the table — find a VIP row and a non-VIP row and compare them.',
+    hint: 'In general, each spreadsheet row is one output file. This demo has 100 rows with unique names and six job types rotating through the list.',
     spotlight: '[data-bf-demo="csv-preview"]',
     onEnter: (get) => get().openCsvPreview(),
     onLeave: (get) => get().closeCsvPreview(),
   },
   {
     id: 'filename',
-    title: 'Naming downloaded files',
-    hint: 'BatchForge can name each file from the spreadsheet (like “Alex-VIP”) so you do not get a pile of “output_001” files.',
+    title: 'Name your downloads',
+    action: 'Click the Filename format box in the top bar.',
+    hint: 'In general, you can build file names from spreadsheet values. On this pass, files download as Name-Role (for example, NOVA CHEN-VIP.svg) instead of generic numbered files.',
     spotlight: '[data-bf-demo="filename-format"]',
   },
   {
     id: 'export-format',
     title: 'Pick a file type',
-    hint: 'SVG for design tools, PNG for slides and email, PDF for printing. Choose before you generate.',
+    action: 'Open the Export as dropdown in the top bar.',
+    hint: 'In general: SVG for design tools, PNG for slides and email, PDF for printing. Choose before you generate.',
     spotlight: '[data-bf-demo="export-format"]',
   },
   {
     id: 'preview',
-    title: 'See all versions',
-    hint: 'Click Generate to build every row at once and flip through the results.',
+    title: 'Generate previews',
+    action: 'Click the blue Generate button in the top-right corner.',
+    hint: 'BatchForge builds a preview of the first 50 passes so you can spot-check names, colors, and the VIP backdrop before downloading all 100.',
     spotlight: '[data-bf-demo="preview-run"]',
     requiresPreview: true,
   },
   {
     id: 'export',
-    title: 'Download everything',
-    hint: 'Click the button again to download the full set as one ZIP (or a PDF).',
+    title: 'Download all 100',
+    action: 'Click the same button again — it now says Download.',
+    hint: 'This exports every row in the guest list as a ZIP of files (or a PDF, depending on what you picked).',
     spotlight: '[data-bf-demo="preview-run"]',
   },
   {
     id: 'finish',
-    title: 'You are done',
-    hint: 'Keep playing with this sample, or click Clear in the top bar (next to Preview) to unload everything and upload your own files.',
+    title: 'Tour complete',
+    action: 'Click Keep playing to stay on this sample, or Clear (red button, top bar) to upload your own files.',
+    hint: 'You walked through layers, filters, mapping, visibility rules, and export — all on a real 100-person event pass.',
     spotlight: '[data-bf-demo="clear-workspace"]',
   },
 ]
@@ -138,4 +171,10 @@ export function runDemoStepEnter(index, get, set) {
 
 export function runDemoStepLeave(index, get, set) {
   getDemoStep(index).onLeave?.(get, set)
+}
+
+export function demoStepPopoverText(step) {
+  if (!step) return ''
+  if (step.action && step.hint) return `${step.action}\n\n${step.hint}`
+  return step.action || step.hint || ''
 }

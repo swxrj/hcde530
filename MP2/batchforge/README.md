@@ -8,14 +8,14 @@ BatchForge turns one SVG design and a spreadsheet into hundreds of finished grap
 
 Click **Try demo** on the live app to load a ready-made example — no uploads needed.
 
-The demo uses a **Helix Relay Summit** event pass (a sci-fi badge design with named layers for name, role, colors, and backgrounds) plus a **6-row spreadsheet** with one row per job type (Security, VIP, Voidsmith, and others). It is set up to show:
+The demo uses a **Helix Relay Summit** event pass (a sci-fi badge design with named layers for name, role, colors, and backgrounds) plus a **100-row spreadsheet** with unique guest names and six job types (Security, VIP, Voidsmith, Trader, Staff, Chrononaut). It is set up to show:
 
 - Connecting parts of the design to spreadsheet fields
 - Text and color changing per row
 - Show/hide rules (for example, a VIP-only background)
 - Preview and export as SVG, PNG, or PDF
 
-A **guided tour** walks you through step by step — follow the numbered list and click **Next**. When you are done, keep exploring the sample or use **Clear** in the top bar to start with your own files.
+A **guided tour** walks you through step by step — each step tells you exactly where to click and what to look for, in plain language. Follow the numbered list and click **Next**. When you are done, keep exploring the sample or use **Clear** in the top bar to start with your own files.
 
 Demo assets live in [`public/demo/`](public/demo/) (`helix-pass.svg` and `helix-variants.csv`) if you want to inspect or reuse them locally.
 
