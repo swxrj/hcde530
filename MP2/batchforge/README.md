@@ -4,7 +4,7 @@ BatchForge turns one SVG design and a spreadsheet into hundreds of finished grap
 
 **Live app:** https://swxrj.github.io/hcde530/batchforge/
 
-Click **Try demo** on that page to load a sample badge and CSV and walk through the main features. No files to download first.
+Click **Try demo** on that page to load the Helix Relay Summit event pass and walk through the main features. No files to download first.
 
 ## Who this is for
 

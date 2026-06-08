@@ -571,7 +571,7 @@ function LayerDetail({ layer }) {
   const totalValues = m.source === 'csv' && m.column ? csvRows.length : 0
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5" data-bf-demo="layer-mapping">
       {/* Layer identity card */}
       <div className="bf-inset rounded-2xl px-4 py-4 flex flex-col gap-2.5">
         <div className="flex items-center gap-2 flex-wrap">

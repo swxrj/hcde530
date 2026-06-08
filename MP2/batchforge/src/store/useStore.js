@@ -10,6 +10,14 @@ import {
   patchTextAlignment,
   restoreTextAlignment,
 } from '../lib/textStyle'
+import {
+  DEMO_SVG,
+  DEMO_CSV,
+  applyDemoPresets,
+  runDemoStepEnter,
+  runDemoStepLeave,
+  DEMO_STEPS,
+} from '../lib/demoConfig'
 
 let cancelFlag = false
 
@@ -21,6 +29,24 @@ function collectMappingReviewIds(mapping) {
   return Object.entries(mapping)
     .filter(([, entry]) => entry.source === 'csv' || entry.colorSource === 'csv')
     .map(([rawId]) => rawId)
+}
+
+const INITIAL_DEMO = {
+  active: false,
+  stepIndex: 0,
+}
+
+function endDemoState() {
+  return { ...INITIAL_DEMO }
+}
+
+function findNodeIdByRawId(nodes, rawId) {
+  for (const node of nodes) {
+    if (node.rawId === rawId) return node.nodeId
+    const childMatch = findNodeIdByRawId(node.children ?? [], rawId)
+    if (childMatch) return childMatch
+  }
+  return null
 }
 
 export const useStore = create((set, get) => ({
@@ -70,16 +96,7 @@ export const useStore = create((set, get) => ({
   toasts: [],
 
   // Guided demo
-  demo: {
-    active: false,
-    step: 0,
-    completed: [],
-    flags: {
-      mappingReviewClosed: false,
-      mappingOverlayToggled: false,
-      csvPreviewOpened: false,
-    },
-  },
+  demo: { ...INITIAL_DEMO },
 
   // Actions
   loadSvg: (text) => {
@@ -100,7 +117,10 @@ export const useStore = create((set, get) => ({
       selectedNodeId: null,
       selectedRawId: null,
       selectionTick: 0,
+      previewResults: [],
+      previewModalOpen: false,
       generation: { running: false, currentIndex: 0, total: 0, previewSvg: null, warnings: [], phase: null },
+      demo: endDemoState(),
     })
   },
 
@@ -117,6 +137,36 @@ export const useStore = create((set, get) => ({
       mappingReviewOpen: layers.length > 0 && hasSuggestedMappings(mapping),
       selectedCsvColumn: headers[0] ?? null,
       filenameFormat: '',
+      demo: endDemoState(),
+    })
+  },
+
+  clearWorkspace: () => {
+    set({
+      svgText: null,
+      docString: null,
+      layers: [],
+      layerTree: [],
+      csvHeaders: [],
+      csvRows: [],
+      mapping: {},
+      mappingReviewIds: [],
+      mappingReviewOpen: false,
+      visibilityRules: {},
+      textAlignOverrides: {},
+      filenameFormat: '',
+      exportFormat: 'svg',
+      exportPdfMode: 'combined',
+      csvPreviewOpen: false,
+      selectedCsvColumn: null,
+      selectedNodeId: null,
+      selectedRawId: null,
+      selectionTick: 0,
+      showMappingOverlay: true,
+      previewResults: [],
+      previewModalOpen: false,
+      generation: { running: false, currentIndex: 0, total: 0, previewSvg: null, warnings: [], phase: null },
+      demo: endDemoState(),
     })
   },
 
@@ -124,8 +174,8 @@ export const useStore = create((set, get) => ({
     const base = import.meta.env.BASE_URL
     try {
       const [svgRes, csvRes] = await Promise.all([
-        fetch(`${base}demo/badge.svg`),
-        fetch(`${base}demo/variants.csv`),
+        fetch(`${base}${DEMO_SVG}`),
+        fetch(`${base}${DEMO_CSV}`),
       ])
       if (!svgRes.ok || !csvRes.ok) {
         throw new Error('Demo files not found')
@@ -135,8 +185,9 @@ export const useStore = create((set, get) => ({
       const csvText = await csvRes.text()
       const { headers, rows } = await parseCsvText(csvText)
       const { docString, layers, layerTree } = parseSvg(svgText)
-      const mapping = autoMap(layers, headers)
-      const mappingReviewIds = collectMappingReviewIds(mapping)
+      const autoMapping = autoMap(layers, headers)
+      const presets = applyDemoPresets(autoMapping)
+      const mappingReviewIds = collectMappingReviewIds(presets.mapping)
 
       set({
         svgText,
@@ -145,12 +196,13 @@ export const useStore = create((set, get) => ({
         layerTree,
         csvHeaders: headers,
         csvRows: rows,
-        mapping,
+        mapping: presets.mapping,
         mappingReviewIds,
-        mappingReviewOpen: hasSuggestedMappings(mapping),
+        mappingReviewOpen: false,
         selectedCsvColumn: headers[0] ?? null,
-        filenameFormat: '',
-        visibilityRules: {},
+        filenameFormat: presets.filenameFormat,
+        exportFormat: presets.exportFormat,
+        visibilityRules: presets.visibilityRules,
         textAlignOverrides: {},
         selectedNodeId: null,
         selectedRawId: null,
@@ -158,37 +210,58 @@ export const useStore = create((set, get) => ({
         showMappingOverlay: true,
         previewResults: [],
         previewModalOpen: false,
+        csvPreviewOpen: false,
         generation: { running: false, currentIndex: 0, total: 0, previewSvg: null, warnings: [], phase: null },
-        demo: {
-          active: true,
-          step: 0,
-          completed: ['loaded'],
-          flags: {
-            mappingReviewClosed: false,
-            mappingOverlayToggled: false,
-            csvPreviewOpened: false,
-          },
-        },
+        demo: { active: true, stepIndex: 0 },
       })
-      get().pushToast({ kind: 'success', text: 'Demo loaded — follow the guide to explore.' })
+
+      for (const rawId of presets.centerAlignLayers) {
+        get().setTextAlignment(rawId, 'center')
+      }
+      get().selectLayer(presets.focusLayer)
+      runDemoStepEnter(0, get, set)
+
+      get().pushToast({ kind: 'success', text: 'Helix Relay demo loaded — follow the guide.' })
     } catch (e) {
       get().pushToast({ kind: 'error', text: `Demo failed: ${e.message}` })
     }
   },
 
   skipDemo: () => {
-    set((s) => ({
-      demo: { ...s.demo, active: false },
-    }))
+    set({ demo: endDemoState(), csvPreviewOpen: false })
   },
 
-  markDemoFlag: (flag) => {
-    set((s) => ({
-      demo: {
-        ...s.demo,
-        flags: { ...s.demo.flags, [flag]: true },
-      },
-    }))
+  advanceDemoStep: () => {
+    const { demo } = get()
+    if (!demo.active) return
+    const current = demo.stepIndex ?? 0
+    if (current >= DEMO_STEPS.length - 1) return
+
+    runDemoStepLeave(current, get, set)
+    const next = current + 1
+    set({ demo: { ...demo, stepIndex: next } })
+    runDemoStepEnter(next, get, set)
+  },
+
+  retreatDemoStep: () => {
+    const { demo } = get()
+    if (!demo.active || (demo.stepIndex ?? 0) <= 0) return
+    const current = demo.stepIndex ?? 0
+
+    runDemoStepLeave(current, get, set)
+    const prev = current - 1
+    set({ demo: { ...demo, stepIndex: prev } })
+    runDemoStepEnter(prev, get, set)
+  },
+
+  finishDemo: (mode) => {
+    set({ demo: endDemoState(), csvPreviewOpen: false })
+    if (mode === 'upload') {
+      get().clearWorkspace()
+      requestAnimationFrame(() => {
+        document.querySelector('[data-bf-demo="upload-design"]')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      })
+    }
   },
 
   setMapping: (rawId, entry) => {
@@ -201,8 +274,6 @@ export const useStore = create((set, get) => ({
   },
 
   closeMappingReview: () => {
-    const { demo } = get()
-    if (demo.active) get().markDemoFlag('mappingReviewClosed')
     set({ mappingReviewOpen: false })
   },
 
@@ -211,8 +282,6 @@ export const useStore = create((set, get) => ({
   },
 
   openCsvPreview: () => {
-    const { demo } = get()
-    if (demo.active) get().markDemoFlag('csvPreviewOpened')
     set({ csvPreviewOpen: true })
   },
   closeCsvPreview: () => set({ csvPreviewOpen: false }),
@@ -248,8 +317,6 @@ export const useStore = create((set, get) => ({
   setExportPdfMode: (mode) => set({ exportPdfMode: mode }),
 
   toggleMappingOverlay: () => {
-    const { demo } = get()
-    if (demo.active) get().markDemoFlag('mappingOverlayToggled')
     set((s) => ({ showMappingOverlay: !s.showMappingOverlay }))
   },
 
@@ -336,7 +403,15 @@ export const useStore = create((set, get) => ({
     selectionTick: s.selectionTick + 1,
   })),
 
-  selectLayer: (rawId) => set((s) => ({ selectedRawId: rawId, selectionTick: s.selectionTick + 1 })),
+  selectLayer: (rawId) => {
+    const { layerTree } = get()
+    const nodeId = findNodeIdByRawId(layerTree, rawId)
+    set((s) => ({
+      selectedRawId: rawId,
+      selectedNodeId: nodeId,
+      selectionTick: s.selectionTick + 1,
+    }))
+  },
 
   run: async () => {
     const { docString, csvRows, mapping, visibilityRules, filenameFormat } = get()

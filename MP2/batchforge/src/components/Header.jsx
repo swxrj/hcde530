@@ -47,6 +47,7 @@ export default function Header() {
                 className="bf-input bf-select text-sm h-8 px-3 w-36 cursor-pointer"
                 value={exportFormat}
                 onChange={(e) => setExportFormat(e.target.value)}
+                data-bf-demo="export-format"
               >
                 <option value="svg">SVG (ZIP)</option>
                 <option value="png">PNG (ZIP)</option>
@@ -83,6 +84,7 @@ export default function Header() {
                 placeholder="Auto (output_001.svg)"
                 onChange={(e) => setFilenameFormat(e.target.value)}
                 title="Use CSV columns like {{name}} and {{team}}, plus {{row}} for row number."
+                data-bf-demo="filename-format"
               />
               <datalist id="filename-format-presets">
                 {filenamePresets.map((preset) => (
