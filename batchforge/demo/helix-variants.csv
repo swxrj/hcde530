@@ -1,0 +1,7 @@
+filename,name,role,idnumber,speciesvar,galaxyvar,accessvar,lifeformvar,background-color,decor1,Ellipse 8,Ellipse 9,namecolor,rolecolor,design_security__visible,design_vip__visible,design_voidsmith__visible,design_chrononaut__visible,design_trader__visible,design_staff__visible
+helix-card-001-security,ARI VALE,SECURITY,HRS-0001,HUMAN,MILKY WAY,SECURITY ZONE,CARBON-BASED,#FF5457,#FF5457,#FF5457,#FF5457,#FF5457,#FF5457,true,false,false,false,false,false
+helix-card-002-vip,NOVA CHEN,VIP,HRS-0002,VEYRAN,WHIRLPOOL,VIP LOUNGE,PLASMA-BASED,#FFCA45,#FFCA45,#FFCA45,#FFCA45,#FFCA45,#FFCA45,false,true,false,false,false,false
+helix-card-003-chrononaut,KAI ORION,CHRONONAUT,HRS-0003,KHEPRI,CARTWHEEL,RELAY DEMO,WATER-BASED,#06E700,#06E700,#06E700,#06E700,#06E700,#06E700,false,false,false,true,false,false
+helix-card-004-voidsmith,LUMA SAGE,VOIDSMITH,HRS-0004,NACREAN,UNKNOWN,RELAY CORE,LIGHT-BASED,#A132F7,#A132F7,#A132F7,#A132F7,#A132F7,#A132F7,false,false,true,false,false,false
+helix-card-005-trader,ZARA QUINN,TRADER,HRS-X-005,AURALITH,TRIANGULUM,CARGO BAY,DARK MATTER,#02A9FD,#02A9FD,#02A9FD,#02A9FD,#02A9FD,#02A9FD,false,false,false,false,true,false
+helix-card-006-staff,MILO VEGA,STAFF,HRS-0006,BRONTARI,PINWHEEL,EXPO HALL,CARBON-BASED,#FF96E9,#FF96E9,#FF96E9,#FF96E9,#FF96E9,#FF96E9,false,false,false,false,false,true
