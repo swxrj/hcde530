@@ -8,13 +8,17 @@ University of Washington HCDE 530 coursework. Focused on qualitative and quantit
 |---|---|
 | `demo_word_count.py` | Reads participant responses from CSV and prints a word count table with summary stats |
 | `demo_responses.csv` | Survey response data with columns: `participant_id`, `role`, `response` |
+| `context.md` | Narrative companion — what the script does, why, and design choices |
+| `week2.md` | Week reflection and competency claims (C1, C2) |
 
 ## How to Run
 
 ```bash
-cd "/Users/swaraj/Documents/New Work/Cursor/uw/hcde530cc/HCDE 530 Week 2"
+cd "HCDE 530 Week 2"
 python3 demo_word_count.py
 ```
+
+For the reasoning behind design choices (DictReader, UTF-8, preview length, etc.), read `context.md`.
 
 ## Code Conventions
 
