@@ -341,7 +341,6 @@ export default function Sidebar() {
   const loadSvg = useStore((s) => s.loadSvg)
   const loadCsv = useStore((s) => s.loadCsv)
   const loadDemo = useStore((s) => s.loadDemo)
-  const clearWorkspace = useStore((s) => s.clearWorkspace)
   const demoActive = useStore((s) => s.demo.active)
   const layerTree = useStore((s) => s.layerTree)
   const csvRows = useStore((s) => s.csvRows)
@@ -439,16 +438,6 @@ export default function Sidebar() {
               Helix Relay Summit pass + guided tour
             </p>
           </motion.button>
-        )}
-        {(svgText || csvRows.length > 0) && (
-          <button
-            type="button"
-            className="text-[11px] font-semibold self-end cursor-pointer -mb-1"
-            style={{ color: 'var(--ink-35)' }}
-            onClick={clearWorkspace}
-          >
-            Clear
-          </button>
         )}
         <UploadCard
           accept=".svg,image/svg+xml"

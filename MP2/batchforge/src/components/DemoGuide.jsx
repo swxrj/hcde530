@@ -23,13 +23,17 @@ export default function DemoGuide() {
   const canAdvance = !previewRequired
 
   useEffect(() => {
-    if (!demo.active || isFinish) {
+    if (!demo.active) {
       driverRef.current?.destroy()
       driverRef.current = null
       return
     }
 
-    if (!currentStep.spotlight) return
+    if (!currentStep?.spotlight) {
+      driverRef.current?.destroy()
+      driverRef.current = null
+      return
+    }
 
     const target = document.querySelector(currentStep.spotlight)
     if (!target) return
@@ -62,13 +66,14 @@ export default function DemoGuide() {
     return () => {
       instance.destroy()
     }
-  }, [demo.active, isFinish, currentStep])
+  }, [demo.active, currentStep])
 
   if (!demo.active) return null
 
   return (
     <div
       className="mx-5 mb-4 shrink-0 rounded-2xl p-4 flex flex-col gap-3"
+      data-bf-demo="demo-guide-panel"
       style={{
         background: 'linear-gradient(158deg, rgba(240,253,255,0.96), rgba(224,242,254,0.88))',
         border: '1px solid rgba(14,165,233,0.22)',
@@ -100,7 +105,7 @@ export default function DemoGuide() {
       </div>
 
       {!isFinish && (
-        <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto">
+        <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto" data-bf-demo="demo-tour-steps">
           {DEMO_STEPS.slice(0, -1).map((step, index) => {
             const done = index < stepIndex
             const current = index === stepIndex
@@ -130,29 +135,19 @@ export default function DemoGuide() {
         <div className="flex flex-col gap-2">
           <motion.button
             type="button"
-            whileTap={{ scale: 0.98 }}
-            className="h-9 rounded-xl text-xs font-semibold cursor-pointer"
-            style={{
-              background: 'linear-gradient(158deg, rgba(56,189,248,0.88), rgba(14,165,233,0.76))',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.42)',
-            }}
+            whileTap={{ scale: 0.96 }}
+            className="bf-btn-primary w-full"
             onClick={() => finishDemo('explore')}
           >
-            Keep exploring demo
+            Keep playing with this sample
           </motion.button>
           <motion.button
             type="button"
-            whileTap={{ scale: 0.98 }}
-            className="h-9 rounded-xl text-xs font-semibold cursor-pointer"
-            style={{
-              background: 'rgba(255,255,255,0.72)',
-              color: 'var(--ink)',
-              border: '1px solid rgba(26,43,74,0.12)',
-            }}
+            whileTap={{ scale: 0.96 }}
+            className="bf-btn-ghost w-full"
             onClick={() => finishDemo('upload')}
           >
-            Upload your own design
+            Start with my own files
           </motion.button>
         </div>
       ) : (
@@ -160,13 +155,8 @@ export default function DemoGuide() {
           {!atFirst && (
             <motion.button
               type="button"
-              whileTap={{ scale: 0.98 }}
-              className="h-8 px-3 rounded-xl text-xs font-semibold cursor-pointer"
-              style={{
-                background: 'rgba(255,255,255,0.72)',
-                color: 'var(--ink-60)',
-                border: '1px solid rgba(26,43,74,0.1)',
-              }}
+              whileTap={{ scale: 0.96 }}
+              className="bf-btn-ghost shrink-0"
               onClick={retreatDemoStep}
             >
               Back
@@ -174,14 +164,10 @@ export default function DemoGuide() {
           )}
           <motion.button
             type="button"
-            whileTap={canAdvance ? { scale: 0.98 } : {}}
+            whileTap={canAdvance ? { scale: 0.96 } : {}}
             disabled={!canAdvance}
-            className="h-8 flex-1 rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
-            style={{
-              background: 'linear-gradient(158deg, rgba(56,189,248,0.88), rgba(14,165,233,0.76))',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.42)',
-            }}
+            className="bf-btn-primary flex-1 disabled:opacity-45 disabled:cursor-not-allowed"
+            data-bf-demo="demo-next"
             onClick={advanceDemoStep}
           >
             {previewRequired ? 'Generate first…' : 'Next'}

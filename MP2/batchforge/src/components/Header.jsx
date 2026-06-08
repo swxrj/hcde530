@@ -1,6 +1,60 @@
+import { useState } from 'react'
 import { motion } from 'motion/react'
 import { useStore } from '../store/useStore'
 import { downloadButtonLabel } from '../lib/export'
+
+function ClearConfirmDialog({ open, onCancel, onConfirm }) {
+  if (!open) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: 'rgba(20,34,60,0.46)' }}
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl overflow-hidden"
+        style={{
+          background: 'rgb(247,250,253)',
+          border: '1px solid rgba(255,255,255,0.58)',
+          boxShadow: '0 24px 80px rgba(26,43,74,0.2), 0 8px 24px rgba(26,43,74,0.1)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 py-5 flex flex-col gap-2">
+          <h2 className="font-semibold text-[15px]" style={{ color: 'var(--ink)' }}>
+            Clear loaded files?
+          </h2>
+          <p className="text-[13px] leading-relaxed" style={{ color: 'var(--ink-60)' }}>
+            This removes the current design and spreadsheet from BatchForge so you can start fresh.
+            Your files on your computer are not deleted — you can upload them again anytime.
+          </p>
+        </div>
+        <div
+          className="px-6 py-4 flex items-center justify-end gap-2"
+          style={{ borderTop: '1px solid rgba(26,43,74,0.07)' }}
+        >
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.96 }}
+            className="bf-btn-ghost"
+            onClick={onCancel}
+          >
+            Cancel
+          </motion.button>
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.96 }}
+            className="bf-btn-danger"
+            onClick={onConfirm}
+          >
+            Clear files
+          </motion.button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Header() {
   const csvHeaders = useStore((s) => s.csvHeaders)
@@ -17,8 +71,12 @@ export default function Header() {
   const cancel = useStore((s) => s.cancel)
   const downloadAll = useStore((s) => s.downloadAll)
   const previewResults = useStore((s) => s.previewResults)
+  const clearWorkspace = useStore((s) => s.clearWorkspace)
+
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
 
   const canRun = !!docString && csvRows.length > 0 && !running
+  const canClear = (!!docString || csvRows.length > 0) && !running
   const primary = csvHeaders[0]
   const secondary = csvHeaders[1]
   const filenamePresets = [
@@ -31,6 +89,7 @@ export default function Header() {
   ].filter(Boolean)
 
   return (
+    <>
     <header
       className="bf-panel h-16 px-8 flex items-center justify-end gap-4 shrink-0"
       style={{ borderBottom: '1px solid rgba(255,255,255,0.42)' }}
@@ -113,6 +172,18 @@ export default function Header() {
           </motion.button>
         )}
 
+        {canClear && (
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
+            className="bf-btn-danger"
+            data-bf-demo="clear-workspace"
+            onClick={() => setClearConfirmOpen(true)}
+          >
+            Clear
+          </motion.button>
+        )}
+
         {running ? (
           <motion.button
             whileTap={{ scale: 0.96 }}
@@ -135,5 +206,14 @@ export default function Header() {
         )}
       </div>
     </header>
+    <ClearConfirmDialog
+      open={clearConfirmOpen}
+      onCancel={() => setClearConfirmOpen(false)}
+      onConfirm={() => {
+        setClearConfirmOpen(false)
+        clearWorkspace()
+      }}
+    />
+    </>
   )
 }
