@@ -1,16 +1,52 @@
-# React + Vite
+# BatchForge
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+BatchForge turns one SVG design and a spreadsheet into hundreds of finished graphics. You upload a template, upload a CSV with one row per version, map columns to layers, and download a ZIP of SVGs. Everything runs in your browser. Nothing gets sent to a server.
 
-Currently, two official plugins are available:
+**Live app:** https://swxrj.github.io/hcde530/batchforge/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Click **Try demo** on that page to load a sample badge and CSV and walk through the main features. No files to download first.
 
-## React Compiler
+## Who this is for
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+BatchForge is for anyone who needs many similar graphics that only change in text, color, or visibility. That includes:
 
-## Expanding the ESLint configuration
+- Designers making badges, certificates, labels, or event materials
+- Teams producing name tags, awards, or social graphics from a template
+- Anyone who would otherwise copy-paste into Figma or Illustrator row by row
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+You do not need to be a developer. If you can export an SVG from a design tool and put data in a CSV, you can use BatchForge.
+
+## What you can do
+
+1. Upload an SVG with named layers (text and fill colors)
+2. Upload a CSV where each row is one output
+3. Auto-match layer names to column headers, or map them by hand
+4. Set visibility rules (show or hide layers based on CSV values)
+5. Preview the first 50 results in the app
+6. Download a ZIP of every variant as SVG, PNG, or PDF
+
+## Run it locally
+
+From this folder:
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:5173 in your browser.
+
+To build for production:
+
+```bash
+npm run build
+npm run preview
+```
+
+## Deploy note
+
+Production builds use the base path `/hcde530/batchforge/` so assets load correctly on GitHub Pages. The live site is updated automatically when changes merge to `main`.
+
+## More detail
+
+See [batchforge.md](./batchforge.md) for how the app is built and how generation works under the hood.

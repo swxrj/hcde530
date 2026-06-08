@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { parseSvg } from '../lib/svgParser'
-import { parseCsv, autoMap } from '../lib/csvMapper'
+import { parseCsv, parseCsvText, autoMap } from '../lib/csvMapper'
 import { generateBatch } from '../lib/generator'
 import { exportResults } from '../lib/export'
 import { createDedupedWarningHandler } from '../lib/validation'
@@ -69,6 +69,18 @@ export const useStore = create((set, get) => ({
   // Toasts
   toasts: [],
 
+  // Guided demo
+  demo: {
+    active: false,
+    step: 0,
+    completed: [],
+    flags: {
+      mappingReviewClosed: false,
+      mappingOverlayToggled: false,
+      csvPreviewOpened: false,
+    },
+  },
+
   // Actions
   loadSvg: (text) => {
     const { docString, layers, layerTree } = parseSvg(text)
@@ -108,6 +120,77 @@ export const useStore = create((set, get) => ({
     })
   },
 
+  loadDemo: async () => {
+    const base = import.meta.env.BASE_URL
+    try {
+      const [svgRes, csvRes] = await Promise.all([
+        fetch(`${base}demo/badge.svg`),
+        fetch(`${base}demo/variants.csv`),
+      ])
+      if (!svgRes.ok || !csvRes.ok) {
+        throw new Error('Demo files not found')
+      }
+
+      const svgText = await svgRes.text()
+      const csvText = await csvRes.text()
+      const { headers, rows } = await parseCsvText(csvText)
+      const { docString, layers, layerTree } = parseSvg(svgText)
+      const mapping = autoMap(layers, headers)
+      const mappingReviewIds = collectMappingReviewIds(mapping)
+
+      set({
+        svgText,
+        docString,
+        layers,
+        layerTree,
+        csvHeaders: headers,
+        csvRows: rows,
+        mapping,
+        mappingReviewIds,
+        mappingReviewOpen: hasSuggestedMappings(mapping),
+        selectedCsvColumn: headers[0] ?? null,
+        filenameFormat: '',
+        visibilityRules: {},
+        textAlignOverrides: {},
+        selectedNodeId: null,
+        selectedRawId: null,
+        selectionTick: 0,
+        showMappingOverlay: true,
+        previewResults: [],
+        previewModalOpen: false,
+        generation: { running: false, currentIndex: 0, total: 0, previewSvg: null, warnings: [], phase: null },
+        demo: {
+          active: true,
+          step: 0,
+          completed: ['loaded'],
+          flags: {
+            mappingReviewClosed: false,
+            mappingOverlayToggled: false,
+            csvPreviewOpened: false,
+          },
+        },
+      })
+      get().pushToast({ kind: 'success', text: 'Demo loaded — follow the guide to explore.' })
+    } catch (e) {
+      get().pushToast({ kind: 'error', text: `Demo failed: ${e.message}` })
+    }
+  },
+
+  skipDemo: () => {
+    set((s) => ({
+      demo: { ...s.demo, active: false },
+    }))
+  },
+
+  markDemoFlag: (flag) => {
+    set((s) => ({
+      demo: {
+        ...s.demo,
+        flags: { ...s.demo.flags, [flag]: true },
+      },
+    }))
+  },
+
   setMapping: (rawId, entry) => {
     set((s) => ({
       mapping: {
@@ -117,13 +200,21 @@ export const useStore = create((set, get) => ({
     }))
   },
 
-  closeMappingReview: () => set({ mappingReviewOpen: false }),
+  closeMappingReview: () => {
+    const { demo } = get()
+    if (demo.active) get().markDemoFlag('mappingReviewClosed')
+    set({ mappingReviewOpen: false })
+  },
 
   clearMappingReviewItem: (rawId) => {
     set((s) => ({ mappingReviewIds: s.mappingReviewIds.filter((id) => id !== rawId) }))
   },
 
-  openCsvPreview: () => set({ csvPreviewOpen: true }),
+  openCsvPreview: () => {
+    const { demo } = get()
+    if (demo.active) get().markDemoFlag('csvPreviewOpened')
+    set({ csvPreviewOpen: true })
+  },
   closeCsvPreview: () => set({ csvPreviewOpen: false }),
   selectCsvColumn: (column) => set({ selectedCsvColumn: column }),
 
@@ -157,6 +248,8 @@ export const useStore = create((set, get) => ({
   setExportPdfMode: (mode) => set({ exportPdfMode: mode }),
 
   toggleMappingOverlay: () => {
+    const { demo } = get()
+    if (demo.active) get().markDemoFlag('mappingOverlayToggled')
     set((s) => ({ showMappingOverlay: !s.showMappingOverlay }))
   },
 

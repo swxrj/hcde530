@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import { useStore } from '../store/useStore'
 import LayerList from './LayerList'
 import EmptyState from './EmptyState'
+import DemoGuide from './DemoGuide'
 
 const FILTERS = [
   {
@@ -320,6 +321,7 @@ function DataPreviewButton() {
       }}
       onClick={openCsvPreview}
       title="Open CSV table preview"
+      data-bf-demo="csv-preview"
     >
       <span className="flex h-7 w-10 items-center justify-center" style={{ color: 'rgba(14,165,233,0.72)' }}>
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -338,6 +340,8 @@ function DataPreviewButton() {
 export default function Sidebar() {
   const loadSvg = useStore((s) => s.loadSvg)
   const loadCsv = useStore((s) => s.loadCsv)
+  const loadDemo = useStore((s) => s.loadDemo)
+  const demoActive = useStore((s) => s.demo.active)
   const layerTree = useStore((s) => s.layerTree)
   const csvRows = useStore((s) => s.csvRows)
   const svgText = useStore((s) => s.svgText)
@@ -345,6 +349,7 @@ export default function Sidebar() {
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  const [demoLoading, setDemoLoading] = useState(false)
   const pillInstantRef = useRef(false)
   const handleFilterFromSelection = useCallback((id) => {
     pillInstantRef.current = true
@@ -364,6 +369,12 @@ export default function Sidebar() {
   const handleCsvUpload = async (file) => {
     try { await loadCsv(file) }
     catch (err) { pushToast({ kind: 'error', text: err.message }) }
+  }
+
+  const handleTryDemo = async () => {
+    setDemoLoading(true)
+    try { await loadDemo() }
+    finally { setDemoLoading(false) }
   }
 
   return (
@@ -405,6 +416,28 @@ export default function Sidebar() {
         className="px-5 pb-5 flex flex-col gap-3"
         style={{ borderBottom: '1px solid rgba(26,43,74,0.06)' }}
       >
+        {!svgText && !demoActive && (
+          <motion.button
+            type="button"
+            whileHover={{ y: -1, scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
+            disabled={demoLoading}
+            onClick={handleTryDemo}
+            className="w-full rounded-2xl px-4 py-3.5 text-left cursor-pointer disabled:opacity-70"
+            style={{
+              background: 'linear-gradient(158deg, rgba(56,189,248,0.14), rgba(14,165,233,0.08))',
+              border: '1px solid rgba(14,165,233,0.24)',
+              boxShadow: '0 6px 18px rgba(14,165,233,0.1), inset 0 1px 0 rgba(255,255,255,0.72)',
+            }}
+          >
+            <p className="text-[13px] font-bold" style={{ color: 'rgb(14,165,233)' }}>
+              {demoLoading ? 'Loading demo…' : 'Try demo'}
+            </p>
+            <p className="text-[11px] mt-0.5 leading-snug" style={{ color: 'rgba(14,165,233,0.68)' }}>
+              One click — sample badge + CSV with a guided tour
+            </p>
+          </motion.button>
+        )}
         <UploadCard
           accept=".svg,image/svg+xml"
           onChange={handleSvgUpload}
@@ -427,6 +460,8 @@ export default function Sidebar() {
           <DataPreviewButton />
         </div>
       </div>
+
+      {demoActive && <DemoGuide />}
 
       {/* Layer section */}
       {!svgText ? (
@@ -474,7 +509,7 @@ export default function Sidebar() {
             <FilterBar filter={filter} onSelect={setFilter} pillInstantRef={pillInstantRef} />
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="flex-1 overflow-y-auto p-3" data-bf-demo="layer-tree">
             <LayerList search={search} filter={filter} onFilterChange={handleFilterFromSelection} />
           </div>
         </>

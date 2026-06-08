@@ -10,8 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "jszip": "^3.10.1",
+    "driver.js": "^1.4.0",
     "jspdf": "^3.0.1",
+    "jszip": "^3.10.1",
     "motion": "^12.40.0",
     "papaparse": "^5.5.3",
     "react": "^19.2.6",

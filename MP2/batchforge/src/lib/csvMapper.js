@@ -1,6 +1,35 @@
 import Papa from 'papaparse'
 import { normalizeName } from './normalize'
 
+function parseCsvResults(results) {
+  const rawHeaders = results.meta.fields ?? []
+  const headers = rawHeaders.map((h) => h.trim())
+  const rows = results.data.map((row) => {
+    const clean = {}
+    for (const h of rawHeaders) {
+      clean[h.trim()] = typeof row[h] === 'string' ? row[h].trim() : String(row[h] ?? '')
+    }
+    return clean
+  })
+  return { headers, rows }
+}
+
+/**
+ * Parse CSV text and return normalized headers + rows.
+ * @param {string} text
+ * @returns {Promise<{ headers: string[], rows: Record<string,string>[] }>}
+ */
+export function parseCsvText(text) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => resolve(parseCsvResults(results)),
+      error: (err) => reject(new Error(err.message)),
+    })
+  })
+}
+
 /**
  * Parse a CSV File and return normalized headers + rows.
  * @param {File} file
@@ -11,18 +40,7 @@ export function parseCsv(file) {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
-        const rawHeaders = results.meta.fields ?? []
-        const headers = rawHeaders.map((h) => h.trim())
-        const rows = results.data.map((row) => {
-          const clean = {}
-          for (const h of rawHeaders) {
-            clean[h.trim()] = typeof row[h] === 'string' ? row[h].trim() : String(row[h] ?? '')
-          }
-          return clean
-        })
-        resolve({ headers, rows })
-      },
+      complete: (results) => resolve(parseCsvResults(results)),
       error: (err) => reject(new Error(err.message)),
     })
   })

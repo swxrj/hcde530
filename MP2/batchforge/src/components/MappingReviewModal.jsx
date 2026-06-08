@@ -83,6 +83,7 @@ export default function MappingReviewModal() {
     >
       <div
         className="w-full max-w-3xl rounded-2xl overflow-hidden"
+        data-bf-demo="mapping-review"
         style={{
           background: 'rgb(247,250,253)',
           border: '1px solid rgba(255,255,255,0.58)',

@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url'
 
 const emptyModule = fileURLToPath(new URL('./src/lib/emptyModule.js', import.meta.url))
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/hcde530/batchforge/' : '/',
   plugins: [tailwindcss(), react()],
   resolve: {
     alias: {
@@ -14,4 +15,4 @@ export default defineConfig({
       dompurify: emptyModule,
     },
   },
-})
+}))

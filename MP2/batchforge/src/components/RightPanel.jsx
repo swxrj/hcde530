@@ -329,7 +329,7 @@ function VisibilitySection({ rawId }) {
   }
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2.5" data-bf-demo="visibility-panel">
       <label
         className="text-[11px] font-bold uppercase tracking-widest"
         style={{ color: 'var(--ink-35)' }}

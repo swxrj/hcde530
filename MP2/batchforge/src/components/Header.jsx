@@ -125,6 +125,7 @@ export default function Header() {
             whileTap={canRun ? { scale: 0.96 } : {}}
             className="bf-btn-primary"
             disabled={!canRun}
+            data-bf-demo="preview-run"
             onClick={previewResults.length > 0 ? downloadAll : run}
           >
             {downloadButtonLabel(exportFormat, previewResults.length > 0, exportPdfMode)}
